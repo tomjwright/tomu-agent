@@ -15,9 +15,6 @@ SYSTEM_PROMPT = (
     "themselves that is worth keeping, save it with the remember tool."
 )
 
-memory = Memory(os.getenv("TOMU_DB", "tomu.db"))
-
-
 def system_prompt(facts: list[str]) -> str:
     if not facts:
         return SYSTEM_PROMPT
@@ -25,7 +22,9 @@ def system_prompt(facts: list[str]) -> str:
     return f"{SYSTEM_PROMPT}\n\nThings you remember about the user:\n{remembered}"
 
 
-def run_agent(message: str, emit: Emit, memory: Memory = memory) -> str:
+def run_agent(message: str, emit: Emit, memory: Memory | None = None) -> str:
+    # read TOMU_DB per turn, after the CLI or server has loaded .env
+    memory = memory or Memory(os.getenv("TOMU_DB", "tomu.db"))
     emit({"type": "turn_start", "message": message})
     try:
         # working memory: recent history plus any facts the retrieval gate found
