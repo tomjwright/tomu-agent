@@ -8,14 +8,15 @@ Each skill is a folder in skills/ holding a SKILL.md file:
     ---
     Step-by-step instructions for the model...
 
-The retrieval gate loads a skill only when the message shares a word with its
-description, so each turn's prompt carries only the skills that fit it.
+Every turn the model sees each skill's name and description. When one fits the
+request, the model calls the use_skill tool to read its full instructions, so
+choosing a skill is the model's decision and shows up as a tool call.
 """
 
 from dataclasses import dataclass
 from pathlib import Path
 
-from tomu.memory import keywords
+from tomu.tools import Tool
 
 SKILLS_DIR = Path(__file__).parent.parent / "skills"
 
@@ -37,11 +38,21 @@ def load_skills(folder: Path = SKILLS_DIR) -> list[Skill]:
     return [parse_skill(path.read_text()) for path in sorted(folder.glob("*/SKILL.md"))]
 
 
-def stems(text: str) -> set[str]:
-    # "meeting" and "meetings" count as the same word
-    return {word.removesuffix("s") for word in keywords(text)}
+def use_skill_tool(skills: list[Skill]) -> Tool:
+    by_name = {skill.name: skill for skill in skills}
 
+    def use_skill(name: str) -> str:
+        if name not in by_name:
+            raise ValueError(f"no skill called {name!r}")
+        return by_name[name].instructions
 
-def pick_skills(message: str, skills: list[Skill]) -> list[Skill]:
-    words = stems(message)
-    return [skill for skill in skills if words & stems(skill.description)]
+    return Tool(
+        name="use_skill",
+        description="Read a skill's step-by-step instructions before doing a task it covers.",
+        input_schema={
+            "type": "object",
+            "properties": {"name": {"type": "string", "description": "The skill's name."}},
+            "required": ["name"],
+        },
+        run=use_skill,
+    )

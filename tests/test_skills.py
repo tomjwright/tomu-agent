@@ -1,6 +1,6 @@
-from tomu.skills import Skill, load_skills, parse_skill, pick_skills
+from tomu.skills import Skill, load_skills, parse_skill, use_skill_tool
 
-MEETINGS = Skill("meeting-planner", "Schedule a meeting with people in other cities.", "...")
+MEETINGS = Skill("meeting-planner", "Schedule a meeting.", "Ask where everyone is.")
 
 
 def test_parse_skill_reads_the_header_and_instructions():
@@ -15,7 +15,7 @@ def test_the_bundled_skills_all_load():
     assert "meeting-planner" in names
 
 
-def test_a_skill_is_picked_when_the_message_shares_a_word_with_its_description():
-    assert pick_skills("Can you schedule meetings with Sarah?", [MEETINGS]) == [MEETINGS]
-    assert pick_skills("What time is it in Tokyo?", [MEETINGS]) == []
-    assert pick_skills("hi, thanks!", [MEETINGS]) == []
+def test_use_skill_returns_the_instructions_of_the_named_skill():
+    tool = use_skill_tool([MEETINGS])
+
+    assert tool.run(name="meeting-planner") == "Ask where everyone is."

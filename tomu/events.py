@@ -8,7 +8,7 @@ or sent to the browser as JSON without any conversion.
                    "skills"}                          past messages loaded, and the
                                                       retrieval gate's decision
                                                       ("retrieve" or "skip"), the facts
-                                                      found and the skills loaded
+                                                      found, and the skills on offer
     llm_call     {"iteration", "text", "stop_reason", one call to the model
                   "usage": {"input", "output"}, "duration_ms"}
     tool_call    {"iteration", "id", "name", "input"} the model asked for a tool

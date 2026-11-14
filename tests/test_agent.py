@@ -26,15 +26,17 @@ def test_turn_uses_history_and_facts_then_saves_itself(tmp_path, monkeypatch):
     skills = [Skill("weather", "Weather forecasts", "Check the forecast first."),
               Skill("email", "Draft an email reply", "Keep it short.")]
 
-    agent.run_agent("Where do I live? Singapore? Any weather tips?", events.append, memory, skills)
+    agent.run_agent("Where do I live? Singapore?", events.append, memory, skills)
 
     assert [e["type"] for e in events] == [
         "turn_start", "memory_recall", "llm_call", "turn_end", "memory_save"]
     assert events[1] == {"type": "memory_recall", "history": 2, "gate": "retrieve",
-                              "facts": ["Tom lives in Singapore"], "skills": ["weather"]}
+                              "facts": ["Tom lives in Singapore"], "skills": ["weather", "email"]}
     assert "Tom lives in Singapore" in requests[0]["system"]
-    assert "Check the forecast first." in requests[0]["system"]
+    # the model sees each skill's description, and reads the instructions with use_skill
+    assert "- email: Draft an email reply" in requests[0]["system"]
     assert "Keep it short." not in requests[0]["system"]
+    assert "use_skill" in [tool["name"] for tool in requests[0]["tools"]]
     assert requests[0]["messages"][0] == {"role": "user", "content": "hello"}
     assert memory.history()[-1] == {"role": "assistant", "content": "You live in Singapore."}
 

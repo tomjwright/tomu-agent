@@ -7,7 +7,7 @@ import anthropic
 from tomu.events import Emit
 from tomu.loop import run_loop
 from tomu.memory import Memory, remember_tool
-from tomu.skills import Skill, load_skills, pick_skills
+from tomu.skills import Skill, load_skills, use_skill_tool
 from tomu.tools import ToolRegistry, current_time_tool
 
 SYSTEM_PROMPT = (
@@ -22,8 +22,10 @@ def system_prompt(facts: list[str], skills: list[Skill]) -> str:
     if facts:
         remembered = "\n".join(f"- {fact}" for fact in facts)
         prompt += f"\n\nThings you remember about the user:\n{remembered}"
-    for skill in skills:
-        prompt += f"\n\nSkill: {skill.name}\n{skill.instructions}"
+    if skills:
+        listed = "\n".join(f"- {skill.name}: {skill.description}" for skill in skills)
+        prompt += ("\n\nSkills you can use. When one fits the request, call use_skill "
+                   f"with its name and follow the instructions it returns:\n{listed}")
     return prompt
 
 
@@ -34,10 +36,9 @@ def run_agent(message: str, emit: Emit, memory: Memory | None = None,
     emit({"type": "turn_start", "message": message})
     try:
         skills = load_skills() if skills is None else skills
-        # working memory: recent history, plus the facts and skills the retrieval gate found
+        # working memory: recent history, the facts the retrieval gate found, and the skill list
         history = memory.history()
         facts = memory.recall(message)
-        skills = pick_skills(message, skills)
         emit({"type": "memory_recall", "history": len(history),
               "gate": "skip" if facts is None else "retrieve", "facts": facts or [],
               "skills": [skill.name for skill in skills]})
@@ -47,7 +48,7 @@ def run_agent(message: str, emit: Emit, memory: Memory | None = None,
             model=os.getenv("TOMU_MODEL", "claude-sonnet-4-6"),
             system=system_prompt(facts or [], skills),
             messages=[*history, {"role": "user", "content": message}],
-            tools=ToolRegistry([current_time_tool, remember_tool(memory)]),
+            tools=ToolRegistry([current_time_tool, remember_tool(memory), use_skill_tool(skills)]),
             emit=emit,
         )
 

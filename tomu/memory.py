@@ -29,12 +29,6 @@ STOPWORDS = set(
 )
 
 
-def keywords(text: str) -> set[str]:
-    """The words in `text` worth searching for: lowercased, no short or filler words."""
-    words = {w for w in re.findall(r"\w+", text.lower()) if len(w) > 2}
-    return words - STOPWORDS
-
-
 class Memory:
     def __init__(self, path: str):
         self.path = path
@@ -68,7 +62,8 @@ class Memory:
     def recall(self, message: str, limit: int = 5) -> list[str] | None:
         """The retrieval gate. Returns None when the gate skips the lookup,
         otherwise the best-matching facts (possibly none)."""
-        words = keywords(message)
+        words = {w for w in re.findall(r"\w+", message.lower()) if len(w) > 2}
+        words -= STOPWORDS
         if not words:
             return None
         query = " OR ".join(f'"{w}"' for w in sorted(words))
