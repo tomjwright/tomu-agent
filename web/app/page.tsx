@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Architecture from "./architecture";
 import { streamChat, type AgentEvent } from "./events";
 import Step from "./step";
@@ -12,6 +12,12 @@ export default function Home() {
   const [input, setInput] = useState("");
   const [running, setRunning] = useState(false);
   const latest = turns.at(-1)?.events ?? [];
+  const bottom = useRef<HTMLDivElement>(null);
+
+  // Keep the newest step in view as the chat grows.
+  useEffect(() => {
+    bottom.current?.scrollIntoView({ behavior: "smooth" });
+  }, [turns]);
 
   // Append an event to the newest turn, so the page updates as steps arrive.
   function addEvent(event: AgentEvent) {
@@ -64,6 +70,7 @@ export default function Home() {
             );
           })}
           {running && <p className="muted">thinking...</p>}
+          <div ref={bottom} />
         </div>
         <form onSubmit={send}>
           <input
