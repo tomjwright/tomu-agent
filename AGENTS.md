@@ -27,4 +27,5 @@ integrations are written in **Python**; Next.js is used only for the frontend.
 ```bash
 uv run ruff check .
 uv run pytest
+cd web && npm run lint && npm run build    # when the frontend changed
 ```
