@@ -31,9 +31,9 @@ def run_agent(message: str, emit: Emit, memory: Memory | None = None,
               skills: list[Skill] | None = None) -> str:
     # read TOMU_DB per turn, after the CLI or server has loaded .env
     memory = memory or Memory(os.getenv("TOMU_DB", "tomu.db"))
-    skills = load_skills() if skills is None else skills
     emit({"type": "turn_start", "message": message})
     try:
+        skills = load_skills() if skills is None else skills
         # working memory: recent history, plus the facts and skills the retrieval gate found
         history = memory.history()
         facts = memory.recall(message)

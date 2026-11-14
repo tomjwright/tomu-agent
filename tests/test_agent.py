@@ -4,7 +4,7 @@ from types import SimpleNamespace as Obj
 
 from tomu import agent
 from tomu.memory import Memory
-from tomu.skills import Skill
+from tomu.skills import Skill, load_skills
 
 
 def fake_client(requests):
@@ -37,3 +37,14 @@ def test_turn_uses_history_and_facts_then_saves_itself(tmp_path, monkeypatch):
     assert "Keep it short." not in requests[0]["system"]
     assert requests[0]["messages"][0] == {"role": "user", "content": "hello"}
     assert memory.history()[-1] == {"role": "assistant", "content": "You live in Singapore."}
+
+
+def test_a_broken_skill_file_ends_the_turn_with_an_error(tmp_path, monkeypatch):
+    events = []
+    (tmp_path / "broken").mkdir()
+    (tmp_path / "broken" / "SKILL.md").write_text("no header here")
+    monkeypatch.setattr(agent, "load_skills", lambda: load_skills(tmp_path))
+
+    agent.run_agent("hello", events.append, Memory(str(tmp_path / "tomu.db")))
+
+    assert [e["type"] for e in events] == ["turn_start", "error"]
