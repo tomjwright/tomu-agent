@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Architecture from "./architecture";
 import { streamChat, type AgentEvent } from "./events";
 import Step from "./step";
 
@@ -10,8 +11,9 @@ export default function Home() {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [input, setInput] = useState("");
   const [running, setRunning] = useState(false);
+  const latest = turns.at(-1)?.events ?? [];
 
-  // Append an event to the newest turn, so the timeline grows as steps arrive.
+  // Append an event to the newest turn, so the page updates as steps arrive.
   function addEvent(event: AgentEvent) {
     setTurns((all) =>
       all.map((turn, i) => (i === all.length - 1 ? { ...turn, events: [...turn.events, event] } : turn)),
@@ -35,35 +37,76 @@ export default function Home() {
   }
 
   return (
-    <main>
-      <h1>Tomu</h1>
-      <p className="muted">Ask something and watch each step the agent takes.</p>
+    <div className="app">
+      <main className="overview">
+        <h1>Tomu</h1>
+        <p className="muted">A local agent that shows every step it takes. Watch the boxes light up.</p>
+        <Stats events={latest} />
+        <h2>Architecture</h2>
+        <Architecture events={latest} />
+      </main>
 
-      {turns.map((turn, i) => {
-        const end = turn.events.find((e) => e.type === "turn_end");
-        return (
-          <section key={i} className="turn">
-            <div className="bubble user">{turn.message}</div>
-            <ol className="timeline">
-              {turn.events.map((event, j) => (
-                <Step key={j} event={event} start={turn.events[0].at} />
-              ))}
-            </ol>
-            {end && <div className="bubble agent">{end.reply}</div>}
-          </section>
-        );
-      })}
+      <aside className="chat">
+        <h2>Chat</h2>
+        <div className="messages">
+          {turns.map((turn, i) => {
+            const end = turn.events.find((e) => e.type === "turn_end");
+            return (
+              <section key={i} className="turn">
+                <div className="bubble user">{turn.message}</div>
+                <ol className="timeline">
+                  {turn.events.map((event, j) => (
+                    <Step key={j} event={event} start={turn.events[0].at} />
+                  ))}
+                </ol>
+                {end && <div className="bubble agent">{end.reply}</div>}
+              </section>
+            );
+          })}
+          {running && <p className="muted">thinking...</p>}
+        </div>
+        <form onSubmit={send}>
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="What time is it in Tokyo?"
+            disabled={running}
+            autoFocus
+          />
+          <button disabled={running || !input.trim()}>Send</button>
+        </form>
+      </aside>
+    </div>
+  );
+}
 
-      <form onSubmit={send}>
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="What time is it in Tokyo?"
-          disabled={running}
-          autoFocus
-        />
-        <button disabled={running || !input.trim()}>{running ? "Thinking..." : "Send"}</button>
-      </form>
-    </main>
+// Totals for the latest turn.
+function Stats({ events }: { events: AgentEvent[] }) {
+  let modelCalls = 0, toolCalls = 0, tokens = 0;
+  for (const e of events) {
+    if (e.type === "llm_call") {
+      modelCalls += 1;
+      tokens += e.usage.input + e.usage.output;
+    }
+    if (e.type === "tool_call") toolCalls += 1;
+  }
+  const seconds = events.length > 1 ? (events.at(-1)!.at - events[0].at).toFixed(1) : "0.0";
+
+  return (
+    <div className="stats">
+      <Stat value={`${seconds}s`} label="turn time" />
+      <Stat value={modelCalls} label="model calls" />
+      <Stat value={toolCalls} label="tool calls" />
+      <Stat value={tokens} label="tokens" />
+    </div>
+  );
+}
+
+function Stat({ value, label }: { value: string | number; label: string }) {
+  return (
+    <div className="stat">
+      <strong>{value}</strong>
+      <span className="muted">{label}</span>
+    </div>
   );
 }

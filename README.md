@@ -14,8 +14,9 @@ uv run uvicorn tomu.server:app --reload         # API on localhost:8000
 cd web && npm install && npm run dev            # step timeline on localhost:3000
 ```
 
-Open http://localhost:3000, ask a question, and each step appears in the
-timeline as it happens. The page talks to the API on `localhost:8000`; set
+Open http://localhost:3000 and ask a question. As the agent works, its box in
+the architecture diagram lights up, and each step appears in the chat as it
+happens. The page talks to the API on `localhost:8000`; set
 `NEXT_PUBLIC_TOMU_API` to point it somewhere else.
 
 Stream a turn's steps from the API:
@@ -35,7 +36,8 @@ curl -N -X POST localhost:8000/api/chat \
 | `tomu/agent.py` | `run_agent(message, emit)`: wires the Anthropic client, system prompt and tools into the loop. |
 | `tomu/server.py` | `POST /api/chat`: runs a turn and streams its events as Server-Sent Events. |
 | `tomu/cli.py` | The terminal chat. |
-| `web/app/page.tsx` | The chat page: sends your message and adds each streamed step to the timeline. |
+| `web/app/page.tsx` | The page: stats and the architecture diagram on the left, the chat and its steps on the right. |
+| `web/app/architecture.tsx` | The diagram: lights up each box the turn has passed through, and makes the current one glow. |
 | `web/app/step.tsx` | How each event type is drawn as a row in the timeline. |
 | `web/app/events.ts` | The event types (mirroring `tomu/events.py`) and `streamChat`, which reads the stream. |
 
