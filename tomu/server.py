@@ -11,6 +11,7 @@ import time
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
@@ -18,6 +19,13 @@ from tomu.agent import run_agent
 
 load_dotenv()
 app = FastAPI(title="Tomu")
+# Let the Next.js page on localhost:3000 call this API from the browser.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_methods=["POST"],
+    allow_headers=["content-type"],
+)
 
 
 class ChatRequest(BaseModel):
