@@ -50,7 +50,7 @@ export default function Architecture({ events }: { events: AgentEvent[] }) {
   const visited = new Set(events.flatMap(stagesOf));
   const count = (type: AgentEvent["type"]) => events.filter((e) => e.type === type).length;
   const recall = events.find((e) => e.type === "memory_recall");
-  const saved = events.filter((e) => e.type === "tool_call" && e.name === "remember").length;
+  const saved = events.filter((e) => e.type === "tool_result" && e.name === "remember" && !e.is_error).length;
 
   const box = (stage: Stage, title: string, detail: string) => (
     <div className={`box ${visited.has(stage) ? "visited" : ""} ${active === stage ? "active" : ""}`}>
