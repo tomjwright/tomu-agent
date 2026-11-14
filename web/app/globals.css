@@ -96,7 +96,7 @@ h3 {
   border-style: solid;
 }
 
-.planned {
+.below {
   display: grid;
   grid-template-columns: 3fr 2fr;
   gap: 16px;
@@ -211,6 +211,10 @@ h3 {
 
 .step.tool {
   border-left-color: #5b9cf0;
+}
+
+.step.memory {
+  border-left-color: #a77bf0;
 }
 
 .step.error {

@@ -1,21 +1,25 @@
 import type { AgentEvent } from "./events";
 
-type Stage = "gateway" | "agent" | "tools" | "reply";
+type Stage = "gateway" | "working" | "agent" | "tools" | "reply" | "gate" | "facts" | "history";
 
-// The box in the diagram that each event belongs to.
-function stageOf(event: AgentEvent): Stage | null {
+// The boxes in the diagram that each event belongs to.
+function stagesOf(event: AgentEvent): Stage[] {
   switch (event.type) {
     case "turn_start":
-      return "gateway";
+      return ["gateway"];
+    case "memory_recall":
+      return ["working", "gate", "history", ...(event.gate === "retrieve" ? ["facts" as const] : [])];
     case "llm_call":
-      return "agent";
+      return ["agent"];
     case "tool_call":
     case "tool_result":
-      return "tools";
+      return event.name === "remember" ? ["tools", "facts"] : ["tools"];
     case "turn_end":
-      return "reply";
+      return ["reply"];
+    case "memory_save":
+      return ["history"];
     case "error":
-      return null;
+      return [];
   }
 }
 
@@ -24,12 +28,16 @@ function activeStage(events: AgentEvent[]): Stage | null {
   const last = events.at(-1);
   switch (last?.type) {
     case "turn_start":
+      return "gate"; // deciding whether to look up facts
+    case "memory_recall":
     case "tool_result":
       return "agent"; // waiting for the model to answer
     case "llm_call":
       return last.stop_reason === "tool_use" ? "tools" : "reply";
     case "tool_call":
       return "tools";
+    case "turn_end":
+      return "history"; // saving the turn
     default:
       return null; // idle, finished or failed
   }
@@ -39,8 +47,10 @@ function activeStage(events: AgentEvent[]): Stage | null {
 // and the box the agent is working in right now glows.
 export default function Architecture({ events }: { events: AgentEvent[] }) {
   const active = activeStage(events);
-  const visited = new Set(events.map(stageOf));
+  const visited = new Set(events.flatMap(stagesOf));
   const count = (type: AgentEvent["type"]) => events.filter((e) => e.type === type).length;
+  const recall = events.find((e) => e.type === "memory_recall");
+  const saved = events.filter((e) => e.type === "tool_call" && e.name === "remember").length;
 
   const box = (stage: Stage, title: string, detail: string) => (
     <div className={`box ${visited.has(stage) ? "visited" : ""} ${active === stage ? "active" : ""}`}>
@@ -56,6 +66,10 @@ export default function Architecture({ events }: { events: AgentEvent[] }) {
         <div className="flow">
           {box("gateway", "Gateway", "web page · terminal")}
           <span className="arrow">→</span>
+          {box("working", "Working memory", recall
+            ? `${recall.history} messages · ${recall.facts.length} facts`
+            : "assembled per turn")}
+          <span className="arrow">→</span>
           <div className="group loop">
             <h3>Loop: up to 10 steps</h3>
             {box("agent", "LLM agent", `reasons · ${count("llm_call")} call(s)`)}
@@ -66,8 +80,16 @@ export default function Architecture({ events }: { events: AgentEvent[] }) {
           {box("reply", "Reply", "back to you")}
         </div>
       </div>
-      <div className="planned">
-        <Planned title="Memory" boxes={["Working memory", "Retrieval gate", "Facts"]} />
+      <div className="below">
+        <div className="group">
+          <h3>Memory: one SQLite file on your machine</h3>
+          <div className="flow">
+            {box("gate", "Retrieval gate", recall ? recall.gate : "retrieve or skip")}
+            <span className="arrow">→</span>
+            {box("facts", "Facts", `full-text search · ${recall?.facts.length ?? 0} found · ${saved} saved`)}
+            {box("history", "History", "past chat · saved each turn")}
+          </div>
+        </div>
         <Planned title="LLM Ops" boxes={["Trace", "Evals"]} />
       </div>
     </div>

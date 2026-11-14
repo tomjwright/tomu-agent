@@ -4,6 +4,10 @@ Each event is a plain dict with a "type", so it can be printed in the terminal
 or sent to the browser as JSON without any conversion.
 
     turn_start   {"message"}                          the user's message arrived
+    memory_recall {"history", "gate", "facts"}        working memory was assembled:
+                                                      past messages loaded, and the
+                                                      retrieval gate's decision
+                                                      ("retrieve" or "skip") and facts
     llm_call     {"iteration", "text", "stop_reason", one call to the model
                   "usage": {"input", "output"}, "duration_ms"}
     tool_call    {"iteration", "id", "name", "input"} the model asked for a tool
@@ -11,6 +15,7 @@ or sent to the browser as JSON without any conversion.
                   "duration_ms"}
     turn_end     {"reply", "iterations", "reason"}    reason: "no_tool_calls"
                                                       or "max_iterations"
+    memory_save  {}                                   the turn was saved to history
     error        {"message"}                          the turn failed
 """
 
