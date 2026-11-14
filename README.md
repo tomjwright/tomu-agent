@@ -1,8 +1,8 @@
 # tomu-agent
 
-A local AI agent that shows its work. Every step it takes (each model call,
-each tool call and result, and why it stopped) is emitted as an event you can
-watch. Inspired by [waku-agent](https://github.com/ShenSeanChen/waku-agent).
+A local AI agent that shows its work. Every step it takes (what it recalled from
+memory, each model call, each tool call and result, and why it stopped) is
+emitted as an event you can watch. Inspired by [waku-agent](https://github.com/ShenSeanChen/waku-agent).
 
 ## Run it
 
@@ -16,7 +16,9 @@ cd web && npm install && npm run dev            # step timeline on localhost:300
 
 Open http://localhost:3000 and ask a question. As the agent works, its box in
 the architecture diagram lights up, and each step appears in the chat as it
-happens. The page talks to the API on `localhost:8000`; set
+happens. Tell it something about yourself ("I live in Singapore") and it saves
+a fact; ask a related question later and you'll see the retrieval gate find it.
+The page talks to the API on `localhost:8000`; set
 `NEXT_PUBLIC_TOMU_API` to point it somewhere else.
 
 Stream a turn's steps from the API:
@@ -31,9 +33,10 @@ curl -N -X POST localhost:8000/api/chat \
 | File | What it does |
 |---|---|
 | `tomu/loop.py` | The loop: call the model, run the tools it asks for, feed the results back, repeat. |
-| `tomu/events.py` | The events the loop emits: `turn_start`, `llm_call`, `tool_call`, `tool_result`, `turn_end`, `error`. |
+| `tomu/events.py` | The events a turn emits: `turn_start`, `memory_recall`, `llm_call`, `tool_call`, `tool_result`, `turn_end`, `memory_save`, `error`. |
 | `tomu/tools.py` | The `Tool` type, the registry that runs tools, and the demo `get_current_time` tool. |
-| `tomu/agent.py` | `run_agent(message, emit)`: wires the Anthropic client, system prompt and tools into the loop. |
+| `tomu/memory.py` | Memory in one SQLite file (`tomu.db`, or `TOMU_DB`): chat history, facts with full-text search, the retrieval gate and the `remember` tool. |
+| `tomu/agent.py` | `run_agent(message, emit)`: loads memory, wires the Anthropic client, system prompt and tools into the loop, then saves the turn. |
 | `tomu/server.py` | `POST /api/chat`: runs a turn and streams its events as Server-Sent Events. |
 | `tomu/cli.py` | The terminal chat. |
 | `web/app/page.tsx` | The page: stats and the architecture diagram on the left, the chat and its steps on the right. |

@@ -12,6 +12,16 @@ export default function Step({ event, start }: { event: AgentEvent; start: numbe
   switch (event.type) {
     case "turn_start":
       return <Row offset={offset} title="Message received" />;
+    case "memory_recall":
+      return (
+        <Row
+          offset={offset}
+          kind="memory"
+          title="Working memory assembled"
+          meta={`${event.history} past messages · retrieval gate: ${event.gate === "skip" ? "skipped, nothing worth searching for" : `searched facts, ${event.facts.length} found`}`}
+          body={event.facts.map((fact) => `- ${fact}`).join("\n")}
+        />
+      );
     case "llm_call":
       return (
         <Row
@@ -43,12 +53,14 @@ export default function Step({ event, start }: { event: AgentEvent; start: numbe
           meta={`after ${event.iterations} model call(s): ${REASONS[event.reason]}`}
         />
       );
+    case "memory_save":
+      return <Row offset={offset} kind="memory" title="Saved to history" meta="your message and the reply" />;
     case "error":
       return <Row offset={offset} kind="error" title="Error" body={event.message} />;
   }
 }
 
-function Row(props: { offset: string; title: string; meta?: string; body?: string; kind?: "tool" | "error" }) {
+function Row(props: { offset: string; title: string; meta?: string; body?: string; kind?: "tool" | "memory" | "error" }) {
   return (
     <li className={`step ${props.kind ?? ""}`}>
       <div className="step-head">

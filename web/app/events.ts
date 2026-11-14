@@ -2,6 +2,7 @@
 
 export type AgentEvent = { at: number } & (
   | { type: "turn_start"; message: string }
+  | { type: "memory_recall"; history: number; gate: "retrieve" | "skip"; facts: string[] }
   | {
       type: "llm_call";
       iteration: number;
@@ -13,6 +14,7 @@ export type AgentEvent = { at: number } & (
   | { type: "tool_call"; iteration: number; id: string; name: string; input: object }
   | { type: "tool_result"; id: string; name: string; output: string; is_error: boolean; duration_ms: number }
   | { type: "turn_end"; reply: string; iterations: number; reason: "no_tool_calls" | "max_iterations" }
+  | { type: "memory_save" }
   | { type: "error"; message: string }
 );
 

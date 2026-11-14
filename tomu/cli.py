@@ -12,6 +12,11 @@ DIM, RESET = "\033[2m", "\033[0m"
 
 def show(event: Event) -> None:
     match event["type"]:
+        case "memory_recall":
+            facts = "skipped" if event["gate"] == "skip" else f"{len(event['facts'])} found"
+            print(f"{DIM}  memory: {event['history']} past message(s), facts {facts}{RESET}")
+            for fact in event["facts"]:
+                print(f"{DIM}    - {fact}{RESET}")
         case "llm_call":
             usage = event["usage"]
             print(f"{DIM}  model call {event['iteration']}: {event['stop_reason']}, "
