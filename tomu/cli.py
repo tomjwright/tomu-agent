@@ -17,6 +17,8 @@ def show(event: Event) -> None:
             print(f"{DIM}  memory: {event['history']} past message(s), facts {facts}{RESET}")
             for fact in event["facts"]:
                 print(f"{DIM}    - {fact}{RESET}")
+            for skill in event["skills"]:
+                print(f"{DIM}    skill loaded: {skill}{RESET}")
         case "llm_call":
             usage = event["usage"]
             print(f"{DIM}  model call {event['iteration']}: {event['stop_reason']}, "
