@@ -71,3 +71,4 @@ def test_stops_at_max_iterations_with_one_tools_off_call():
     assert reply == "best effort"
     assert requests[-1]["tool_choice"] == {"type": "none"}
     assert events[-1]["reason"] == "max_iterations"
+    assert events[-1]["iterations"] == len(requests) == 3

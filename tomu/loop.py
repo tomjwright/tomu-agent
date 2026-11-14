@@ -84,7 +84,7 @@ def run_loop(
     final = ask_model(max_iterations + 1, system=f"{system}\n\n{LIMIT_NOTE}",
                       tool_choice={"type": "none"})
     reply = text_of(final)
-    emit({"type": "turn_end", "reply": reply, "iterations": max_iterations,
+    emit({"type": "turn_end", "reply": reply, "iterations": max_iterations + 1,
           "reason": "max_iterations"})
     return reply
 
