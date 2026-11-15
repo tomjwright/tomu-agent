@@ -13,7 +13,7 @@ dependencies = [
 
 [project.scripts]
 tomu = "tomu.cli:main"
-tomu-google = "tomu.google_calendar:connect"
+tomu-google = "tomu.google_auth:connect"
 
 [project.optional-dependencies]
 google = [

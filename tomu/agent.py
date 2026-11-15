@@ -5,6 +5,7 @@ import os
 import anthropic
 
 from tomu.events import Emit
+from tomu.gmail import read_email_tool, search_email_tool
 from tomu.google_calendar import calendar_tool
 from tomu.loop import run_loop
 from tomu.memory import Memory, remember_tool
@@ -49,7 +50,8 @@ def run_agent(message: str, emit: Emit, memory: Memory | None = None,
             model=os.getenv("TOMU_MODEL", "claude-sonnet-4-6"),
             system=system_prompt(facts or [], skills),
             messages=[*history, {"role": "user", "content": message}],
-            tools=ToolRegistry([current_time_tool, calendar_tool, remember_tool(memory),
+            tools=ToolRegistry([current_time_tool, calendar_tool, search_email_tool,
+                                read_email_tool, remember_tool(memory),
                                 use_skill_tool(skills)]),
             emit=emit,
         )
