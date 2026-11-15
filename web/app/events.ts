@@ -12,6 +12,8 @@ export type AgentEvent = { at: number } & (
       duration_ms: number;
     }
   | { type: "tool_call"; iteration: number; id: string; name: string; input: object }
+  | { type: "approval_request"; id: string; name: string; input: object }
+  | { type: "approval_result"; id: string; name: string; approved: boolean }
   | { type: "tool_result"; id: string; name: string; output: string; is_error: boolean; duration_ms: number }
   | { type: "turn_end"; reply: string; iterations: number; reason: "no_tool_calls" | "max_iterations" }
   | { type: "memory_save" }
@@ -19,6 +21,16 @@ export type AgentEvent = { at: number } & (
 );
 
 const API_URL = process.env.NEXT_PUBLIC_TOMU_API ?? "http://localhost:8000";
+
+// Tell the waiting turn your answer to an approval_request.
+export async function answerApproval(id: string, approved: boolean) {
+  const response = await fetch(`${API_URL}/api/approve`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ id, approved }),
+  });
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+}
 
 // POST the message and call onEvent for each `data: {...}` block as it arrives.
 export async function streamChat(message: string, onEvent: (event: AgentEvent) => void) {

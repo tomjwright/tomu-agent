@@ -24,6 +24,8 @@ def show(event: Event) -> None:
                   f"{usage['input']} in / {usage['output']} out, {event['duration_ms']}ms{RESET}")
         case "tool_call":
             print(f"{DIM}  tool {event['name']}({json.dumps(event['input'])}){RESET}")
+        case "approval_result":
+            print(f"{DIM}    {'approved' if event['approved'] else 'declined'}{RESET}")
         case "tool_result":
             status = "ERROR " if event["is_error"] else ""
             print(f"{DIM}    -> {status}{event['output'][:200]} ({event['duration_ms']}ms){RESET}")
@@ -35,10 +37,15 @@ def show(event: Event) -> None:
             print(f"  error: {event['message']}")
 
 
+def ask(id: str, name: str, args: dict) -> bool:
+    answer = input(f"  allow {name}({json.dumps(args)})? [y/N] ")
+    return answer.strip().lower() == "y"
+
+
 def main() -> None:
     load_dotenv()
     while (message := input("you: ").strip()) not in ("", "exit"):
-        run_agent(message, show)
+        run_agent(message, show, approve=ask)
 
 
 if __name__ == "__main__":

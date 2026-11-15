@@ -1,13 +1,14 @@
-"""Gmail: lets the agent search and read your email (read-only).
+"""Gmail: lets the agent search and read your email, and send email after you
+approve each one.
 
-Sign in first with `uv run tomu-google` (see tomu/google_auth.py). Sending
-email waits for the approval flow, so the agent can't send anything yet.
+Sign in first with `uv run tomu-google` (see tomu/google_auth.py).
 """
 
 import base64
 import re
+from email.message import EmailMessage
 
-from tomu.google_auth import GMAIL, google_api
+from tomu.google_auth import GMAIL, GMAIL_SEND, google_api
 from tomu.tools import Tool
 
 LONGEST_EMAIL = 4000  # characters of an email body handed to the model
@@ -87,4 +88,31 @@ read_email_tool = Tool(
         "required": ["id"],
     },
     run=read_email,
+)
+
+
+def send_email(to: str, subject: str, body: str) -> str:
+    email = EmailMessage()
+    email["To"], email["Subject"] = to, subject
+    email.set_content(body)
+    raw = base64.urlsafe_b64encode(email.as_bytes()).decode()
+    gmail_send = google_api("gmail", "v1", GMAIL_SEND, "Sending email").users().messages()
+    sent = gmail_send.send(userId="me", body={"raw": raw}).execute()
+    return f"Sent to {to} (id {sent['id']})."
+
+
+send_email_tool = Tool(
+    name="send_email",
+    description="Send a plain-text email from the user's Gmail. The user must approve it first.",
+    input_schema={
+        "type": "object",
+        "properties": {
+            "to": {"type": "string", "description": "The recipient's email address."},
+            "subject": {"type": "string"},
+            "body": {"type": "string", "description": "The email's text."},
+        },
+        "required": ["to", "subject", "body"],
+    },
+    run=send_email,
+    needs_approval=True,
 )

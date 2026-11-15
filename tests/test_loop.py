@@ -72,3 +72,47 @@ def test_stops_at_max_iterations_with_one_tools_off_call():
     assert requests[-1]["tool_choice"] == {"type": "none"}
     assert events[-1]["reason"] == "max_iterations"
     assert events[-1]["iterations"] == len(requests) == 3
+
+
+def run_with_approval(answer):
+    """Run a turn where the model asks for a tool that needs approval."""
+    ran, events, asked = [], [], []
+    send = Tool(name="send", description="Send it", input_schema={"type": "object"},
+                run=lambda: ran.append(True) or "sent", needs_approval=True)
+    responses = [tool_use("send", {}), text("ok")]
+
+    def approve(id, name, input):
+        asked.append((id, name, input))
+        return answer
+
+    run_loop(lambda **request: responses.pop(0), "test-model", "system",
+             [{"role": "user", "content": "hi"}], ToolRegistry([send]), events.append,
+             approve=approve)
+    return ran, events, asked
+
+
+def test_a_tool_that_needs_approval_runs_after_a_yes():
+    ran, events, asked = run_with_approval(True)
+    assert ran == [True]
+    assert asked == [("t1", "send", {})]
+    assert types(events) == ["llm_call", "tool_call", "approval_request", "approval_result",
+                             "tool_result", "llm_call", "turn_end"]
+    assert events[3]["approved"] is True
+    assert events[4]["output"] == "sent"
+
+
+def test_a_no_means_the_tool_never_runs_and_the_model_is_told():
+    ran, events, _ = run_with_approval(False)
+    assert ran == []
+    assert events[3]["approved"] is False
+    assert events[4]["is_error"] and "declined" in events[4]["output"]
+
+
+def test_without_a_way_to_ask_the_answer_is_no():
+    ran, events = [], []
+    send = Tool(name="send", description="Send it", input_schema={"type": "object"},
+                run=lambda: ran.append(True) or "sent", needs_approval=True)
+    responses = [tool_use("send", {}), text("ok")]
+    run_loop(lambda **request: responses.pop(0), "test-model", "system",
+             [{"role": "user", "content": "hi"}], ToolRegistry([send]), events.append)
+    assert ran == []

@@ -7,6 +7,9 @@
         results = run(the tools it asked for)    # act
         messages += results                      # observe
 
+Tools that change something (send an email, add an event) need your approval:
+the loop pauses, asks `approve`, and runs the tool only if you say yes.
+
 Two ways out (the guardrails):
   1. the model answers without asking for a tool -> normal end of turn
   2. max_iterations reached -> one last call with tools switched off, so the
@@ -21,6 +24,8 @@ from collections.abc import Callable
 
 from tomu.events import Emit
 from tomu.tools import ToolRegistry
+
+Approve = Callable[[str, str, dict], bool]  # (call id, tool name, input) -> yes or no
 
 LIMIT_NOTE = (
     "You have reached the step limit and cannot call more tools. "
@@ -37,6 +42,7 @@ def run_loop(
     emit: Emit,
     max_iterations: int = 10,
     max_tokens: int = 2048,
+    approve: Approve = lambda id, name, input: False,  # no way to ask, so the answer is no
 ) -> str:
     def ask_model(iteration: int, **overrides):
         started = time.perf_counter()
@@ -55,6 +61,12 @@ def run_loop(
         messages.append({"role": "assistant", "content": response.content})
         return response
 
+    def ask_approval(call) -> bool:
+        emit({"type": "approval_request", "id": call.id, "name": call.name, "input": call.input})
+        approved = approve(call.id, call.name, call.input)
+        emit({"type": "approval_result", "id": call.id, "name": call.name, "approved": approved})
+        return approved
+
     for iteration in range(1, max_iterations + 1):
         # reason
         response = ask_model(iteration)
@@ -72,8 +84,12 @@ def run_loop(
         for call in tool_calls:
             emit({"type": "tool_call", "iteration": iteration, "id": call.id,
                   "name": call.name, "input": call.input})
-            started = time.perf_counter()
-            output, is_error = tools.execute(call.name, call.input)
+            approved = not tools.needs_approval(call.name) or ask_approval(call)
+            started = time.perf_counter()  # after approval, so waiting for you isn't counted
+            if approved:
+                output, is_error = tools.execute(call.name, call.input)
+            else:
+                output, is_error = "The user declined this action, so it was not done.", True
             emit({"type": "tool_result", "id": call.id, "name": call.name, "output": output,
                   "is_error": is_error, "duration_ms": ms_since(started)})
             results.append({"type": "tool_result", "tool_use_id": call.id,

@@ -1,7 +1,7 @@
 import type { AgentEvent } from "./events";
 
 type Stage =
-  | "gateway" | "working" | "agent" | "tools" | "reply"
+  | "gateway" | "working" | "agent" | "approval" | "tools" | "reply"
   | "gate" | "semantic" | "procedural" | "episodic";
 
 // The boxes in the diagram that each event belongs to.
@@ -22,6 +22,9 @@ function stagesOf(event: AgentEvent): Stage[] {
       if (event.name === "remember") return ["tools", "semantic"];
       if (event.name === "use_skill") return ["tools", "procedural"];
       return ["tools"];
+    case "approval_request":
+    case "approval_result":
+      return ["approval"];
     case "turn_end":
       return ["reply"];
     case "memory_save":
@@ -44,6 +47,10 @@ function activeStage(events: AgentEvent[]): Stage | null {
       return last.stop_reason === "tool_use" ? "tools" : "reply";
     case "tool_call":
       return "tools";
+    case "approval_request":
+      return "approval"; // waiting for your yes or no
+    case "approval_result":
+      return last.approved ? "tools" : "agent";
     case "turn_end":
       return "episodic"; // saving the turn
     default:
@@ -57,12 +64,13 @@ const BOX: Record<Stage, [number, number, number]> = {
   gateway: [30, 85, 120],
   working: [190, 85, 130],
   agent: [355, 60, 120],
-  tools: [355, 140, 120],
+  approval: [355, 140, 120],
+  tools: [355, 220, 120],
   reply: [515, 85, 95],
-  gate: [190, 270, 130], // drawn as a diamond
-  semantic: [20, 400, 150],
-  procedural: [180, 400, 150],
-  episodic: [340, 400, 150],
+  gate: [190, 350, 130], // drawn as a diamond
+  semantic: [20, 480, 150],
+  procedural: [180, 480, 150],
+  episodic: [340, 480, 150],
 };
 
 // The links between boxes. A link lights up once both of its ends have been
@@ -71,15 +79,17 @@ type Link = { from: Stage; to: Stage; path: string; label?: [string, number, num
 const LINKS: Link[] = [
   { from: "gateway", to: "working", path: "M150 112 H186" },
   { from: "working", to: "agent", path: "M320 112 H336" },
-  { from: "agent", to: "tools", path: "M410 114 V136" },
-  { from: "tools", to: "agent", path: "M420 140 V118" },
+  { from: "agent", to: "tools", path: "M355 100 H347 V240 H351" }, // tools that only read skip approval
+  { from: "agent", to: "approval", path: "M415 114 V136" },
+  { from: "approval", to: "tools", path: "M415 194 V216" },
+  { from: "tools", to: "agent", path: "M475 247 H483 V87 H479" },
   { from: "agent", to: "reply", path: "M490 112 H511" },
-  { from: "gate", to: "working", path: "M255 270 V143", label: ["assembled per turn", 261, 165] },
-  { from: "semantic", to: "gate", path: "M95 400 V370 H245 V326", label: ["search facts", 101, 390] },
-  { from: "procedural", to: "gate", path: "M255 400 V332", label: ["skill list", 261, 392] },
-  { from: "tools", to: "procedural", path: "M380 194 V385 H318 V396", label: ["use_skill", 386, 240] },
-  { from: "episodic", to: "gate", path: "M415 400 V370 H265 V326", label: ["last 20 messages", 421, 390] },
-  { from: "reply", to: "episodic", path: "M562 139 V427 H494", label: ["save turn", 568, 300] },
+  { from: "gate", to: "working", path: "M255 350 V143", label: ["assembled per turn", 261, 165] },
+  { from: "semantic", to: "gate", path: "M95 480 V450 H245 V406", label: ["search facts", 101, 470] },
+  { from: "procedural", to: "gate", path: "M255 480 V412", label: ["skill list", 261, 472] },
+  { from: "tools", to: "procedural", path: "M380 274 V465 H318 V476", label: ["use_skill", 386, 320] },
+  { from: "episodic", to: "gate", path: "M415 480 V450 H265 V406", label: ["last 20 messages", 421, 470] },
+  { from: "reply", to: "episodic", path: "M562 139 V507 H494", label: ["save turn", 568, 300] },
 ];
 
 // The architecture diagram: one connected system. Boxes the turn has passed
@@ -93,11 +103,14 @@ export default function Architecture({ events }: { events: AgentEvent[] }) {
     events.filter((e) => e.type === "tool_result" && e.name === tool && !e.is_error).length;
   const saved = succeeded("remember");
   const used = succeeded("use_skill");
+  const answers = events.filter((e) => e.type === "approval_result");
+  const yes = answers.filter((e) => e.type === "approval_result" && e.approved).length;
 
   const DETAIL: Record<Stage, string> = {
     gateway: "web page · terminal",
     working: recall ? `${recall.history} msgs · ${recall.facts.length} facts` : "prompt + context",
     agent: `reasons · ${count("llm_call")} call(s)`,
+    approval: active === "approval" ? "waiting for you" : `${yes} yes · ${answers.length - yes} no`,
     tools: `acts · ${count("tool_call")} call(s)`,
     reply: "back to you",
     gate: recall ? recall.gate : "retrieve or skip",
@@ -106,7 +119,7 @@ export default function Architecture({ events }: { events: AgentEvent[] }) {
     episodic: recall ? `history · ${recall.history} loaded` : "history",
   };
   const TITLE: Record<Stage, string> = {
-    gateway: "Gateway", working: "Working memory", agent: "LLM agent", tools: "Tools",
+    gateway: "Gateway", working: "Working memory", agent: "LLM agent", approval: "Approval", tools: "Tools",
     reply: "Reply", gate: "Retrieval gate", semantic: "Semantic", procedural: "Procedural",
     episodic: "Episodic",
   };
@@ -114,17 +127,17 @@ export default function Architecture({ events }: { events: AgentEvent[] }) {
   const state = (stage: Stage) => `${visited.has(stage) ? "visited" : ""} ${active === stage ? "active" : ""}`;
 
   return (
-    <svg className="arch" viewBox="0 0 780 490">
+    <svg className="arch" viewBox="0 0 780 570">
       <defs>
         <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
           <path d="M0 0 L10 5 L0 10 z" />
         </marker>
       </defs>
 
-      <Group x={10} y={10} w={620} h={210} label="Harness: one turn, from your message to the reply" />
-      <Group x={340} y={35} w={150} h={175} label="Loop: up to 10 steps" solid />
-      <Group x={10} y={240} w={620} h={240} label="Memory: one SQLite file on your machine" />
-      <Group x={640} y={10} w={130} h={210} label="LLM Ops: coming soon" />
+      <Group x={10} y={10} w={620} h={290} label="Harness: one turn, from your message to the reply" />
+      <Group x={340} y={35} w={150} h={255} label="Loop: up to 10 steps" solid />
+      <Group x={10} y={320} w={620} h={240} label="Memory: one SQLite file on your machine" />
+      <Group x={640} y={10} w={130} h={290} label="LLM Ops: coming soon" />
 
       {LINKS.map(({ from, to, path, label }) => {
         const lit = visited.has(from) && visited.has(to);
