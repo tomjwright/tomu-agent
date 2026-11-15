@@ -1,4 +1,7 @@
-import type { AgentEvent } from "./events";
+"use client";
+
+import { useState } from "react";
+import { answerApproval, type AgentEvent } from "./events";
 
 const REASONS = {
   no_tool_calls: "the model answered without asking for a tool",
@@ -6,7 +9,8 @@ const REASONS = {
 };
 
 // One row in the timeline. `start` is when the turn began, to show "+0.81s".
-export default function Step({ event, start }: { event: AgentEvent; start: number }) {
+// `answered` says whether an approval request already has its answer.
+export default function Step({ event, start, answered }: { event: AgentEvent; start: number; answered: boolean }) {
   const offset = `+${(event.at - start).toFixed(2)}s`;
 
   switch (event.type) {
@@ -35,6 +39,27 @@ export default function Step({ event, start }: { event: AgentEvent; start: numbe
       return (
         <Row offset={offset} kind="tool" title={`Tool call: ${event.name}`} body={JSON.stringify(event.input, null, 2)} />
       );
+    case "approval_request":
+      return (
+        <Row
+          offset={offset}
+          kind="approval"
+          title={`Approval needed: ${event.name}`}
+          meta="This changes something outside the agent, so it waits for you."
+          body={JSON.stringify(event.input, null, 2)}
+        >
+          {!answered && <ApprovalButtons id={event.id} />}
+        </Row>
+      );
+    case "approval_result":
+      return (
+        <Row
+          offset={offset}
+          kind={event.approved ? "approval" : "error"}
+          title={event.approved ? `Approved: ${event.name}` : `Declined: ${event.name}`}
+          meta={event.approved ? "the tool runs now" : "the tool does not run, and the model is told"}
+        />
+      );
     case "tool_result":
       return (
         <Row
@@ -60,7 +85,38 @@ export default function Step({ event, start }: { event: AgentEvent; start: numbe
   }
 }
 
-function Row(props: { offset: string; title: string; meta?: string; body?: string; kind?: "tool" | "memory" | "error" }) {
+// Approve or Deny: POSTs your answer, and the turn carries on.
+function ApprovalButtons({ id }: { id: string }) {
+  const [sending, setSending] = useState(false);
+  const [problem, setProblem] = useState("");
+
+  async function answer(approved: boolean) {
+    setSending(true);
+    try {
+      await answerApproval(id, approved);
+    } catch (err) {
+      setProblem(`Could not send your answer: ${err}`);
+      setSending(false);
+    }
+  }
+
+  return (
+    <div className="approval-buttons">
+      <button disabled={sending} onClick={() => answer(true)}>Approve</button>
+      <button disabled={sending} className="deny" onClick={() => answer(false)}>Deny</button>
+      {problem && <span className="muted">{problem}</span>}
+    </div>
+  );
+}
+
+function Row(props: {
+  offset: string;
+  title: string;
+  meta?: string;
+  body?: string;
+  kind?: "tool" | "memory" | "error" | "approval";
+  children?: React.ReactNode;
+}) {
   return (
     <li className={`step ${props.kind ?? ""}`}>
       <div className="step-head">
@@ -69,6 +125,7 @@ function Row(props: { offset: string; title: string; meta?: string; body?: strin
       </div>
       {props.meta && <div className="muted">{props.meta}</div>}
       {props.body && <pre>{props.body}</pre>}
+      {props.children}
     </li>
   );
 }

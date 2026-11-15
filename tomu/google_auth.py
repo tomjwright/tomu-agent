@@ -4,7 +4,8 @@ Run `uv run tomu-google` once: it opens your browser to sign in to Google and
 saves the login token on your machine (google-token.json, or TOMU_GOOGLE_TOKEN).
 It needs a Google OAuth "Desktop app" client, set as GOOGLE_CLIENT_ID and
 GOOGLE_CLIENT_SECRET in .env, and the optional Google libraries:
-`uv sync --extra google`. Every permission asked for is read-only.
+`uv sync --extra google`. It asks to read your calendar and email, add events
+and send email; the agent only adds or sends after you approve each one.
 """
 
 import os
@@ -13,7 +14,9 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 CALENDAR = "https://www.googleapis.com/auth/calendar.events.readonly"
+CALENDAR_WRITE = "https://www.googleapis.com/auth/calendar.events"
 GMAIL = "https://www.googleapis.com/auth/gmail.readonly"
+GMAIL_SEND = "https://www.googleapis.com/auth/gmail.send"
 NOT_INSTALLED = "Google support isn't installed. Run: uv sync --extra google"
 
 
@@ -42,7 +45,8 @@ def connect() -> None:
         "auth_uri": "https://accounts.google.com/o/oauth2/auth",
         "token_uri": "https://oauth2.googleapis.com/token",
     }}
-    flow = InstalledAppFlow.from_client_config(client, [CALENDAR, GMAIL])
+    flow = InstalledAppFlow.from_client_config(
+        client, [CALENDAR, CALENDAR_WRITE, GMAIL, GMAIL_SEND])
     save_token(flow.run_local_server(port=0))
     print(f"Connected. Token saved to {token_path()}")
 

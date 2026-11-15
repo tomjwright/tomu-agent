@@ -250,6 +250,24 @@ h3 {
   border-left-color: #a77bf0;
 }
 
+.step.approval {
+  border-left-color: #e0b84a;
+}
+
+.approval-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.approval-buttons button {
+  padding: 6px 14px;
+}
+
+.approval-buttons button.deny {
+  background: #3a3f4a;
+}
+
 .step.error {
   border-left-color: #e05a5a;
 }

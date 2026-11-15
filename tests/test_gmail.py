@@ -1,5 +1,6 @@
 import base64
 import json
+from types import SimpleNamespace as Obj
 
 import pytest
 
@@ -70,3 +71,26 @@ def test_an_attached_text_file_is_not_mistaken_for_the_body():
         {"mimeType": "text/plain", "filename": "", "body": {"data": encoded("The message.")}},
     ]}
     assert gmail.plain_text(payload) == "The message."
+
+
+def test_send_email_sends_a_plain_text_email(monkeypatch):
+    sent = []
+
+    class Messages:
+        def send(self, userId, body):
+            sent.append(body)
+            return Obj(execute=lambda: {"id": "m1"})
+
+    api = Obj(users=lambda: Obj(messages=Messages))
+    monkeypatch.setattr(gmail, "google_api", lambda *args: api)
+
+    output = gmail.send_email("bob@example.com", "Hi", "Hello Bob")
+
+    assert output == "Sent to bob@example.com (id m1)."
+    email = base64.urlsafe_b64decode(sent[0]["raw"]).decode()
+    assert "To: bob@example.com" in email and "Subject: Hi" in email and "Hello Bob" in email
+
+
+def test_only_sending_needs_approval():
+    assert gmail.send_email_tool.needs_approval
+    assert not gmail.search_email_tool.needs_approval and not gmail.read_email_tool.needs_approval

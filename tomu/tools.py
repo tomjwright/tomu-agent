@@ -12,6 +12,7 @@ class Tool:
     description: str
     input_schema: dict  # JSON schema for the tool's arguments
     run: Callable[..., str]
+    needs_approval: bool = False  # True for tools that change something: you must say yes first
 
 
 class ToolRegistry:
@@ -24,6 +25,10 @@ class ToolRegistry:
             {"name": t.name, "description": t.description, "input_schema": t.input_schema}
             for t in self.tools.values()
         ]
+
+    def needs_approval(self, name: str) -> bool:
+        tool = self.tools.get(name)
+        return tool is not None and tool.needs_approval
 
     def execute(self, name: str, args: dict) -> tuple[str, bool]:
         """Run a tool and return (output, is_error). Never raises: a failing

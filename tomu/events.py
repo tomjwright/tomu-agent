@@ -12,6 +12,10 @@ or sent to the browser as JSON without any conversion.
     llm_call     {"iteration", "text", "stop_reason", one call to the model
                   "usage": {"input", "output"}, "duration_ms"}
     tool_call    {"iteration", "id", "name", "input"} the model asked for a tool
+    approval_request {"id", "name", "input"}          the tool changes something, so
+                                                      the loop waits for your yes or no
+    approval_result  {"id", "name", "approved"}       your answer (no answer in time
+                                                      counts as no)
     tool_result  {"id", "name", "output", "is_error", the tool's answer
                   "duration_ms"}
     turn_end     {"reply", "iterations", "reason"}    reason: "no_tool_calls"

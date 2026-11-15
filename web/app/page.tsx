@@ -62,7 +62,7 @@ export default function Home() {
                 <div className="bubble user">{turn.message}</div>
                 <ol className="timeline">
                   {turn.events.map((event, j) => (
-                    <Step key={j} event={event} start={turn.events[0].at} />
+                    <Step key={j} event={event} start={turn.events[0].at} answered={isAnswered(turn.events, event)} />
                   ))}
                 </ol>
                 {end && <div className="bubble agent">{end.reply}</div>}
@@ -85,6 +85,11 @@ export default function Home() {
       </aside>
     </div>
   );
+}
+
+// Whether an approval request already has its approval_result.
+function isAnswered(events: AgentEvent[], event: AgentEvent) {
+  return event.type === "approval_request" && events.some((e) => e.type === "approval_result" && e.id === event.id);
 }
 
 // Totals for the latest turn.

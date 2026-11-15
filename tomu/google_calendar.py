@@ -1,11 +1,12 @@
-"""Google Calendar: lets the agent read your upcoming events (read-only).
+"""Google Calendar: lets the agent read your upcoming events, and add new ones
+after you approve each one.
 
 Sign in first with `uv run tomu-google` (see tomu/google_auth.py).
 """
 
 from datetime import UTC, datetime, timedelta
 
-from tomu.google_auth import CALENDAR, google_api
+from tomu.google_auth import CALENDAR, CALENDAR_WRITE, google_api
 from tomu.tools import Tool
 
 
@@ -49,4 +50,32 @@ calendar_tool = Tool(
         },
     },
     run=list_events,
+)
+
+
+def create_event(summary: str, start: str, end: str, location: str = "") -> str:
+    event = {"summary": summary, "start": {"dateTime": start}, "end": {"dateTime": end}}
+    if location:
+        event["location"] = location
+    calendar = google_api("calendar", "v3", CALENDAR_WRITE, "Adding calendar events")
+    created = calendar.events().insert(calendarId="primary", body=event).execute()
+    return f"Added: {describe(created)}\n{created.get('htmlLink', '')}"
+
+
+create_event_tool = Tool(
+    name="create_calendar_event",
+    description="Add an event to the user's Google Calendar. The user must approve it first.",
+    input_schema={
+        "type": "object",
+        "properties": {
+            "summary": {"type": "string", "description": "The event's title."},
+            "start": {"type": "string",
+                      "description": "ISO 8601 with UTC offset, e.g. 2026-11-20T15:00:00+08:00"},
+            "end": {"type": "string", "description": "Same format as start."},
+            "location": {"type": "string"},
+        },
+        "required": ["summary", "start", "end"],
+    },
+    run=create_event,
+    needs_approval=True,
 )
