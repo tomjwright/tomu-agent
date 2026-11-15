@@ -2,7 +2,7 @@
 
 export type AgentEvent = { at: number } & (
   | { type: "turn_start"; message: string }
-  | { type: "memory_recall"; history: number; gate: "retrieve" | "skip"; facts: string[] }
+  | { type: "memory_recall"; history: number; gate: "retrieve" | "skip"; facts: string[]; skills: string[] }
   | {
       type: "llm_call";
       iteration: number;

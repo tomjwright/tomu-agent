@@ -10,12 +10,18 @@ function stagesOf(event: AgentEvent): Stage[] {
     case "turn_start":
       return ["gateway"];
     case "memory_recall":
-      return ["gate", "episodic", "working", ...(event.gate === "retrieve" ? ["semantic" as const] : [])];
+      return [
+        "gate", "episodic", "working",
+        ...(event.gate === "retrieve" ? ["semantic" as const] : []),
+        ...(event.skills.length ? ["procedural" as const] : []), // the skill list is always offered
+      ];
     case "llm_call":
       return ["agent"];
     case "tool_call":
     case "tool_result":
-      return event.name === "remember" ? ["tools", "semantic"] : ["tools"];
+      if (event.name === "remember") return ["tools", "semantic"];
+      if (event.name === "use_skill") return ["tools", "procedural"];
+      return ["tools"];
     case "turn_end":
       return ["reply"];
     case "memory_save":
@@ -70,7 +76,8 @@ const LINKS: Link[] = [
   { from: "agent", to: "reply", path: "M490 112 H511" },
   { from: "gate", to: "working", path: "M255 270 V143", label: ["assembled per turn", 261, 165] },
   { from: "semantic", to: "gate", path: "M95 400 V370 H245 V326", label: ["search facts", 101, 390] },
-  { from: "procedural", to: "gate", path: "M255 400 V332", label: ["skills", 261, 392] },
+  { from: "procedural", to: "gate", path: "M255 400 V332", label: ["skill list", 261, 392] },
+  { from: "tools", to: "procedural", path: "M380 194 V385 H318 V396", label: ["use_skill", 386, 240] },
   { from: "episodic", to: "gate", path: "M415 400 V370 H265 V326", label: ["last 20 messages", 421, 390] },
   { from: "reply", to: "episodic", path: "M562 139 V427 H494", label: ["save turn", 568, 300] },
 ];
@@ -82,7 +89,10 @@ export default function Architecture({ events }: { events: AgentEvent[] }) {
   const visited = new Set(events.flatMap(stagesOf));
   const count = (type: AgentEvent["type"]) => events.filter((e) => e.type === type).length;
   const recall = events.find((e) => e.type === "memory_recall");
-  const saved = events.filter((e) => e.type === "tool_result" && e.name === "remember" && !e.is_error).length;
+  const succeeded = (tool: string) =>
+    events.filter((e) => e.type === "tool_result" && e.name === tool && !e.is_error).length;
+  const saved = succeeded("remember");
+  const used = succeeded("use_skill");
 
   const DETAIL: Record<Stage, string> = {
     gateway: "web page · terminal",
@@ -92,7 +102,7 @@ export default function Architecture({ events }: { events: AgentEvent[] }) {
     reply: "back to you",
     gate: recall ? recall.gate : "retrieve or skip",
     semantic: `facts · ${recall?.facts.length ?? 0} found · ${saved} saved`,
-    procedural: "SKILL.md · coming soon",
+    procedural: `SKILL.md · ${recall?.skills.length ?? 0} listed · ${used} used`,
     episodic: recall ? `history · ${recall.history} loaded` : "history",
   };
   const TITLE: Record<Stage, string> = {
@@ -101,8 +111,7 @@ export default function Architecture({ events }: { events: AgentEvent[] }) {
     episodic: "Episodic",
   };
 
-  const state = (stage: Stage) =>
-    stage === "procedural" ? "planned" : `${visited.has(stage) ? "visited" : ""} ${active === stage ? "active" : ""}`;
+  const state = (stage: Stage) => `${visited.has(stage) ? "visited" : ""} ${active === stage ? "active" : ""}`;
 
   return (
     <svg className="arch" viewBox="0 0 780 490">
@@ -120,9 +129,8 @@ export default function Architecture({ events }: { events: AgentEvent[] }) {
       {LINKS.map(({ from, to, path, label }) => {
         const lit = visited.has(from) && visited.has(to);
         const flowing = active === to && visited.has(from);
-        const planned = from === "procedural";
         return (
-          <g key={path} className={`link ${lit ? "lit" : ""} ${flowing ? "flowing" : ""} ${planned ? "planned" : ""}`}>
+          <g key={path} className={`link ${lit ? "lit" : ""} ${flowing ? "flowing" : ""}`}>
             <path d={path} markerEnd="url(#arrow)" />
             {label && <text x={label[1]} y={label[2]}>{label[0]}</text>}
           </g>

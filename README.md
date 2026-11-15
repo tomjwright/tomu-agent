@@ -18,6 +18,8 @@ Open http://localhost:3000 and ask a question. As the agent works, its box in
 the architecture diagram lights up, and each step appears in the chat as it
 happens. Tell it something about yourself ("I live in Singapore") and it saves
 a fact; ask a related question later and you'll see the retrieval gate find it.
+Ask it to set up a meeting and the model reads the `meeting-planner` skill
+with the `use_skill` tool, so the Procedural box lights up.
 The page talks to the API on `localhost:8000`; set
 `NEXT_PUBLIC_TOMU_API` to point it somewhere else.
 
@@ -36,6 +38,8 @@ curl -N -X POST localhost:8000/api/chat \
 | `tomu/events.py` | The events a turn emits: `turn_start`, `memory_recall`, `llm_call`, `tool_call`, `tool_result`, `turn_end`, `memory_save`, `error`. |
 | `tomu/tools.py` | The `Tool` type, the registry that runs tools, and the demo `get_current_time` tool. |
 | `tomu/memory.py` | Memory in one SQLite file (`tomu.db`, or `TOMU_DB`): chat history, facts with full-text search, the retrieval gate and the `remember` tool. |
+| `tomu/skills.py` | Skills (procedural memory): loads every `skills/<name>/SKILL.md`, and the `use_skill` tool the model calls to read one. |
+| `skills/` | The skills themselves, as plain Markdown: a `name` and `description` header, then instructions for the model. |
 | `tomu/agent.py` | `run_agent(message, emit)`: loads memory, wires the Anthropic client, system prompt and tools into the loop, then saves the turn. |
 | `tomu/server.py` | `POST /api/chat`: runs a turn and streams its events as Server-Sent Events. |
 | `tomu/cli.py` | The terminal chat. |

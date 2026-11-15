@@ -19,7 +19,7 @@ export default function Step({ event, start }: { event: AgentEvent; start: numbe
           kind="memory"
           title="Working memory assembled"
           meta={`${event.history} past messages · retrieval gate: ${event.gate === "skip" ? "skipped, nothing worth searching for" : `searched facts, ${event.facts.length} found`}`}
-          body={event.facts.map((fact) => `- ${fact}`).join("\n")}
+          body={[...event.facts.map((fact) => `- ${fact}`), `skills on offer: ${event.skills.join(", ") || "none"}`].join("\n")}
         />
       );
     case "llm_call":
