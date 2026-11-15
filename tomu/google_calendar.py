@@ -66,12 +66,17 @@ def fetch_events(days: int) -> list[dict]:
 
     now = datetime.now(UTC)
     calendar = build("calendar", "v3", credentials=credentials, cache_discovery=False)
-    response = calendar.events().list(
-        calendarId="primary", timeMin=now.isoformat(),
-        timeMax=(now + timedelta(days=days)).isoformat(),
-        singleEvents=True, orderBy="startTime", maxResults=50,
-    ).execute()
-    return response.get("items", [])
+    events, page = [], None
+    while True:  # Google sends long calendars a page at a time
+        response = calendar.events().list(
+            calendarId="primary", timeMin=now.isoformat(),
+            timeMax=(now + timedelta(days=days)).isoformat(),
+            singleEvents=True, orderBy="startTime", pageToken=page,
+        ).execute()
+        events += response.get("items", [])
+        page = response.get("nextPageToken")
+        if not page:
+            return events
 
 
 def describe(event: dict) -> str:
