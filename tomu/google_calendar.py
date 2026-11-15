@@ -27,6 +27,7 @@ def token_path() -> Path:
 def save_token(credentials) -> None:
     # created readable by only you, since the token opens your calendar
     file = os.open(token_path(), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    os.fchmod(file, 0o600)  # also tightens a token file that already existed
     with os.fdopen(file, "w") as token:
         token.write(credentials.to_json())
 
