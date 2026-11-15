@@ -107,7 +107,7 @@ export default function Architecture({ events }: { events: AgentEvent[] }) {
   const yes = answers.filter((e) => e.type === "approval_result" && e.approved).length;
 
   const DETAIL: Record<Stage, string> = {
-    gateway: "web page · terminal",
+    gateway: "web · terminal · Telegram",
     working: recall ? `${recall.history} msgs · ${recall.facts.length} facts` : "prompt + context",
     agent: `reasons · ${count("llm_call")} call(s)`,
     approval: active === "approval" ? "waiting for you" : `${yes} yes · ${answers.length - yes} no`,
