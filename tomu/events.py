@@ -21,6 +21,11 @@ or sent to the browser as JSON without any conversion.
     turn_end     {"reply", "iterations", "reason"}    reason: "no_tool_calls"
                                                       or "max_iterations"
     memory_save  {}                                   the turn was saved to history
+    consolidation_start {"messages"}                  20 new messages built up (or you
+                                                      pressed Consolidate), so the model
+                                                      reads them for lasting facts
+    consolidation_end {"messages", "facts",           the new facts it saved
+                       "usage", "duration_ms"}
     error        {"message"}                          the turn failed
 """
 

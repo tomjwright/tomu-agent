@@ -18,6 +18,7 @@ from tomu.tools import Tool
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS history (role TEXT, content TEXT, saved_at REAL);
 CREATE VIRTUAL TABLE IF NOT EXISTS facts USING fts5(text, saved_at UNINDEXED);
+CREATE TABLE IF NOT EXISTS consolidation (last_rowid INTEGER);
 """
 
 # Words too common to say anything about what the user is asking for.
@@ -53,6 +54,24 @@ class Memory:
                 "INSERT INTO history VALUES (?, ?, ?)",
                 [("user", message, now), ("assistant", reply, now)],
             )
+
+    def unconsolidated(self) -> tuple[list[dict], int]:
+        """Messages saved since the last consolidation, and the row id of the newest one."""
+        with self.connect() as db:
+            done = db.execute("SELECT MAX(last_rowid) FROM consolidation").fetchone()[0] or 0
+            rows = db.execute(
+                "SELECT rowid, role, content FROM history WHERE rowid > ? ORDER BY rowid", (done,)
+            ).fetchall()
+        newest = rows[-1][0] if rows else done
+        return [{"role": role, "content": content} for _, role, content in rows], newest
+
+    def mark_consolidated(self, rowid: int) -> None:
+        with self.connect() as db:
+            db.execute("INSERT INTO consolidation VALUES (?)", (rowid,))
+
+    def all_facts(self) -> list[str]:
+        with self.connect() as db:
+            return [text for (text,) in db.execute("SELECT text FROM facts ORDER BY rowid")]
 
     def remember(self, fact: str) -> str:
         with self.connect() as db:

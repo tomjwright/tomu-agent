@@ -3,6 +3,7 @@
 The stream is Server-Sent Events: one `data: {...json event...}` line per step.
 When a tool needs your approval, the turn waits until the page answers with
 POST /api/approve {"id", "approved"}.
+POST /api/consolidate streams the same way while the agent turns messages into facts.
 Run it with `uv run uvicorn tomu.server:app --reload`.
 """
 
@@ -17,7 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from tomu.agent import run_agent
+from tomu.agent import consolidate_now, run_agent
 
 load_dotenv()
 app = FastAPI(title="Tomu")
@@ -48,6 +49,11 @@ def chat(request: ChatRequest) -> StreamingResponse:
     return StreamingResponse(stream_turn(request.message), media_type="text/event-stream")
 
 
+@app.post("/api/consolidate")
+def consolidate_memory() -> StreamingResponse:
+    return StreamingResponse(stream_events(consolidate_now), media_type="text/event-stream")
+
+
 @app.post("/api/approve")
 def approve(answer: ApprovalAnswer) -> dict:
     if (box := waiting.get(answer.id)) is None:
@@ -69,7 +75,11 @@ def wait_for_approval(id: str, name: str, input: dict) -> bool:
 
 
 def stream_turn(message: str):
-    """Run the agent in a background thread and yield its events as they arrive."""
+    return stream_events(lambda emit: run_agent(message, emit, approve=wait_for_approval))
+
+
+def stream_events(work):
+    """Run work(emit) in a background thread and yield its events as they arrive."""
     events: queue.Queue = queue.Queue()
 
     def emit(event: dict):
@@ -79,9 +89,9 @@ def stream_turn(message: str):
 
     def worker():
         try:
-            run_agent(message, emit, approve=wait_for_approval)
+            work(emit)
         finally:
-            events.put(None)  # end of turn, even if the agent crashed
+            events.put(None)  # the end, even if the agent crashed
 
     threading.Thread(target=worker, daemon=True).start()
     while (event := events.get()) is not None:

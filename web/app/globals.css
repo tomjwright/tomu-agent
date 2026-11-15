@@ -313,6 +313,10 @@ button {
   cursor: pointer;
 }
 
+button.secondary {
+  background: #2a2e36;
+}
+
 button:disabled {
   opacity: 0.5;
   cursor: default;

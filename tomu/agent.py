@@ -4,6 +4,7 @@ import os
 
 import anthropic
 
+from tomu.consolidate import consolidate
 from tomu.events import Emit
 from tomu.gmail import read_email_tool, search_email_tool, send_email_tool
 from tomu.google_calendar import calendar_tool, create_event_tool
@@ -17,6 +18,9 @@ SYSTEM_PROMPT = (
     "Use tools when they help; be concise. When the user tells you something about "
     "themselves that is worth keeping, save it with the remember tool."
 )
+
+
+DEFAULT_MODEL = "claude-sonnet-4-6"
 
 
 def system_prompt(facts: list[str], skills: list[Skill]) -> str:
@@ -46,9 +50,11 @@ def run_agent(message: str, emit: Emit, memory: Memory | None = None,
               "gate": "skip" if facts is None else "retrieve", "facts": facts or [],
               "skills": [skill.name for skill in skills]})
 
+        call_model = anthropic.Anthropic().messages.create
+        model = os.getenv("TOMU_MODEL", DEFAULT_MODEL)
         reply = run_loop(
-            call_model=anthropic.Anthropic().messages.create,
-            model=os.getenv("TOMU_MODEL", "claude-sonnet-4-6"),
+            call_model=call_model,
+            model=model,
             system=system_prompt(facts or [], skills),
             messages=[*history, {"role": "user", "content": message}],
             tools=ToolRegistry([current_time_tool, calendar_tool, create_event_tool,
@@ -61,7 +67,19 @@ def run_agent(message: str, emit: Emit, memory: Memory | None = None,
         if reply:  # the API rejects empty messages, so an empty reply isn't kept
             memory.save_turn(message, reply)
             emit({"type": "memory_save"})
+            consolidate(memory, emit, call_model, model)  # only once 20 new messages built up
         return reply
     except Exception as exc:
         emit({"type": "error", "message": str(exc)})
         return ""
+
+
+def consolidate_now(emit: Emit, memory: Memory | None = None) -> list[str]:
+    """The Consolidate button: consolidate whatever is new, however little."""
+    try:
+        memory = memory or Memory(os.getenv("TOMU_DB", "tomu.db"))
+        return consolidate(memory, emit, anthropic.Anthropic().messages.create,
+                           os.getenv("TOMU_MODEL", DEFAULT_MODEL), force=True)
+    except Exception as exc:
+        emit({"type": "error", "message": str(exc)})
+        return []

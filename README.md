@@ -53,6 +53,7 @@ curl -N -X POST localhost:8000/api/chat \
 | `tomu/events.py` | The events a turn emits: `turn_start`, `memory_recall`, `llm_call`, `tool_call`, `approval_request`, `approval_result`, `tool_result`, `turn_end`, `memory_save`, `error`. |
 | `tomu/tools.py` | The `Tool` type, the registry that runs tools, and the demo `get_current_time` tool. |
 | `tomu/memory.py` | Memory in one SQLite file (`tomu.db`, or `TOMU_DB`): chat history, facts with full-text search, the retrieval gate and the `remember` tool. |
+| `tomu/consolidate.py` | Consolidation: every 20 new messages (or when you press Consolidate), the model turns old conversation into lasting facts. |
 | `tomu/skills.py` | Skills (procedural memory): loads every `skills/<name>/SKILL.md`, and the `use_skill` tool the model calls to read one. |
 | `skills/` | The skills themselves, as plain Markdown: a `name` and `description` header, then instructions for the model. |
 | `tomu/google_auth.py` | `uv run tomu-google`, which signs you in to Google, and the shared login the Google tools use. |

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Architecture from "./architecture";
-import { streamChat, type AgentEvent } from "./events";
+import { streamChat, streamConsolidate, type AgentEvent } from "./events";
 import Step from "./step";
 
 type Turn = { message: string; events: AgentEvent[] };
@@ -26,15 +26,20 @@ export default function Home() {
     );
   }
 
-  async function send(e: React.FormEvent) {
+  function send(e: React.FormEvent) {
     e.preventDefault();
     const message = input.trim();
     if (!message || running) return;
     setInput("");
+    run(message, (onEvent) => streamChat(message, onEvent));
+  }
+
+  // Start a new entry in the chat and stream the agent's events into it.
+  async function run(title: string, stream: (onEvent: (event: AgentEvent) => void) => Promise<void>) {
     setRunning(true);
-    setTurns((all) => [...all, { message, events: [] }]);
+    setTurns((all) => [...all, { message: title, events: [] }]);
     try {
-      await streamChat(message, addEvent);
+      await stream(addEvent);
     } catch (err) {
       addEvent({ type: "error", message: `Could not reach the agent: ${err}`, at: Date.now() / 1000 });
     } finally {
@@ -81,6 +86,15 @@ export default function Home() {
             autoFocus
           />
           <button disabled={running || !input.trim()}>Send</button>
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => run("Consolidate memory", streamConsolidate)}
+            disabled={running}
+            title="Turn messages not consolidated yet into lasting facts"
+          >
+            Consolidate
+          </button>
         </form>
       </aside>
     </div>

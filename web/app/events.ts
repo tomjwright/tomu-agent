@@ -17,6 +17,8 @@ export type AgentEvent = { at: number } & (
   | { type: "tool_result"; id: string; name: string; output: string; is_error: boolean; duration_ms: number }
   | { type: "turn_end"; reply: string; iterations: number; reason: "no_tool_calls" | "max_iterations" }
   | { type: "memory_save" }
+  | { type: "consolidation_start"; messages: number }
+  | { type: "consolidation_end"; messages: number; facts: string[]; usage: { input: number; output: number }; duration_ms: number }
   | { type: "error"; message: string }
 );
 
@@ -33,11 +35,20 @@ export async function answerApproval(id: string, approved: boolean) {
 }
 
 // POST the message and call onEvent for each `data: {...}` block as it arrives.
-export async function streamChat(message: string, onEvent: (event: AgentEvent) => void) {
-  const response = await fetch(`${API_URL}/api/chat`, {
+export function streamChat(message: string, onEvent: (event: AgentEvent) => void) {
+  return streamEvents("/api/chat", { message }, onEvent);
+}
+
+// The Consolidate button: turns messages not yet consolidated into facts.
+export function streamConsolidate(onEvent: (event: AgentEvent) => void) {
+  return streamEvents("/api/consolidate", {}, onEvent);
+}
+
+async function streamEvents(path: string, body: object, onEvent: (event: AgentEvent) => void) {
+  const response = await fetch(`${API_URL}${path}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ message }),
+    body: JSON.stringify(body),
   });
   if (!response.ok || !response.body) throw new Error(`HTTP ${response.status}`);
 
