@@ -20,6 +20,11 @@ happens. Tell it something about yourself ("I live in Singapore") and it saves
 a fact; ask a related question later and you'll see the retrieval gate find it.
 Ask it to set up a meeting and the model reads the `meeting-planner` skill
 with the `use_skill` tool, so the Procedural box lights up.
+To let it read your Google Calendar, add a Google OAuth "Desktop app" client to
+`.env` (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`; see `.env.example`), then run
+`uv sync --extra google` and `uv run tomu-google` once to sign in. Your login
+token stays on your machine in `google-token.json`. Access is read-only.
+
 The page talks to the API on `localhost:8000`; set
 `NEXT_PUBLIC_TOMU_API` to point it somewhere else.
 
@@ -40,6 +45,7 @@ curl -N -X POST localhost:8000/api/chat \
 | `tomu/memory.py` | Memory in one SQLite file (`tomu.db`, or `TOMU_DB`): chat history, facts with full-text search, the retrieval gate and the `remember` tool. |
 | `tomu/skills.py` | Skills (procedural memory): loads every `skills/<name>/SKILL.md`, and the `use_skill` tool the model calls to read one. |
 | `skills/` | The skills themselves, as plain Markdown: a `name` and `description` header, then instructions for the model. |
+| `tomu/google_calendar.py` | The read-only `list_calendar_events` tool, and `uv run tomu-google`, which signs you in to Google. |
 | `tomu/agent.py` | `run_agent(message, emit)`: loads memory, wires the Anthropic client, system prompt and tools into the loop, then saves the turn. |
 | `tomu/server.py` | `POST /api/chat`: runs a turn and streams its events as Server-Sent Events. |
 | `tomu/cli.py` | The terminal chat. |
