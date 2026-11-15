@@ -25,8 +25,10 @@ def token_path() -> Path:
 
 
 def save_token(credentials) -> None:
-    token_path().write_text(credentials.to_json())
-    token_path().chmod(0o600)  # only you can read your login token
+    # created readable by only you, since the token opens your calendar
+    file = os.open(token_path(), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(file, "w") as token:
+        token.write(credentials.to_json())
 
 
 def connect() -> None:
