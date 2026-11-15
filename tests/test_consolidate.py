@@ -69,6 +69,22 @@ def test_a_failed_model_call_leaves_the_messages_for_next_time(tmp_path):
     assert len(memory.unconsolidated()[0]) == 20
 
 
+def test_two_consolidations_at_once_never_read_the_same_messages(tmp_path):
+    memory, requests, events = Memory(str(tmp_path / "tomu.db")), [], []
+    chat(memory, 10)
+    model = fake_model("Tom likes laksa", requests)
+
+    def slow_model(**request):  # a second run (say, from Telegram) starts mid-call
+        assert consolidate(memory, events.append, model, "m", force=True) == []
+        return model(**request)
+
+    consolidate(memory, events.append, slow_model, "m")
+
+    assert len(requests) == 1 and memory.all_facts() == ["Tom likes laksa"]
+    messages, done, newest = memory.unconsolidated()
+    assert not memory.claim(0, newest)  # a mark that already moved can't be claimed again
+
+
 def test_a_turn_consolidates_by_itself_when_twenty_messages_built_up(tmp_path, monkeypatch):
     memory, requests, events = Memory(str(tmp_path / "tomu.db")), [], []
     model = fake_model("Tom likes laksa", requests)

@@ -31,9 +31,11 @@ def consolidate(memory: Memory, emit: Emit, call_model: Callable, model: str,
                 force: bool = False) -> list[str]:
     """Save the lasting facts in messages not yet consolidated, and return them.
     Unless `force` is set, it waits until CONSOLIDATE_EVERY messages have built up."""
-    messages, newest = memory.unconsolidated()
+    messages, done, newest = memory.unconsolidated()
     if not force and len(messages) < CONSOLIDATE_EVERY:
         return []
+    if messages and not memory.claim(done, newest):
+        return []  # another consolidation is reading these messages right now
     emit({"type": "consolidation_start", "messages": len(messages)})
     started, facts, usage = time.perf_counter(), [], {"input": 0, "output": 0}
     if messages:
@@ -42,7 +44,8 @@ def consolidate(memory: Memory, emit: Emit, call_model: Callable, model: str,
                 model=model, max_tokens=1024, system=PROMPT,
                 messages=[{"role": "user", "content": transcript(memory.all_facts(), messages)}],
             )
-        except Exception as exc:  # not marked as done, so these messages are tried again
+        except Exception as exc:
+            memory.release(newest)  # so these messages are tried again next time
             emit({"type": "error", "message": f"Consolidation failed: {exc}"})
             return []
         text = "".join(block.text for block in response.content if block.type == "text")
@@ -50,7 +53,6 @@ def consolidate(memory: Memory, emit: Emit, call_model: Callable, model: str,
         facts = [fact for fact in facts if fact and fact.upper() != "NONE"]
         for fact in facts:
             memory.remember(fact)
-        memory.mark_consolidated(newest)
         usage = {"input": response.usage.input_tokens, "output": response.usage.output_tokens}
     emit({"type": "consolidation_end", "messages": len(messages), "facts": facts,
           "usage": usage, "duration_ms": round((time.perf_counter() - started) * 1000)})
