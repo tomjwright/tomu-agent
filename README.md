@@ -29,6 +29,12 @@ chat shows the exact inputs with Approve and Deny buttons, and the terminal asks
 No answer within 5 minutes counts as no. If you signed in before approvals existed, run
 `uv run tomu-google` again to grant the extra permissions.
 
+To chat from your phone, create a bot with @BotFather on Telegram (`/newbot`), put its
+token in `.env` as `TELEGRAM_BOT_TOKEN`, and run `uv run tomu-telegram`. It answers only
+`TELEGRAM_ALLOWED_USER`, your numeric Telegram user id: message the bot once and your id
+is printed in the terminal. Approvals arrive as Approve and Deny buttons, and each reply
+ends with a one-line summary of its steps. It shares memory with the page and terminal.
+
 The page talks to the API on `localhost:8000`; set
 `NEXT_PUBLIC_TOMU_API` to point it somewhere else.
 
@@ -55,6 +61,7 @@ curl -N -X POST localhost:8000/api/chat \
 | `tomu/agent.py` | `run_agent(message, emit)`: loads memory, wires the Anthropic client, system prompt and tools into the loop, then saves the turn. |
 | `tomu/server.py` | `POST /api/chat`: runs a turn and streams its events as Server-Sent Events. `POST /api/approve` answers an approval request. |
 | `tomu/cli.py` | The terminal chat. |
+| `tomu/telegram.py` | `uv run tomu-telegram`: the Telegram gateway, with approval buttons. |
 | `web/app/page.tsx` | The page: stats and the architecture diagram on the left, the chat and its steps on the right. |
 | `web/app/architecture.tsx` | The diagram: lights up each box the turn has passed through, and makes the current one glow. |
 | `web/app/step.tsx` | How each event type is drawn as a row in the timeline. |
