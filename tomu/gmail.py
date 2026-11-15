@@ -5,6 +5,7 @@ email waits for the approval flow, so the agent can't send anything yet.
 """
 
 import base64
+import re
 
 from tomu.google_auth import GMAIL, google_api
 from tomu.tools import Tool
@@ -30,15 +31,28 @@ def search_email(query: str, max_results: int = 10) -> str:
 
 
 def describe(email: dict) -> str:
-    headers = {h["name"]: h["value"] for h in email["payload"].get("headers", [])}
-    return (f"id {email['id']} | {headers.get('Date', '')} | {headers.get('From', '')}\n"
-            f"{headers.get('Subject', '(no subject)')}: {email.get('snippet', '')}")
+    headers = header_values(email["payload"])
+    return (f"id {email['id']} | {headers.get('date', '')} | {headers.get('from', '')}\n"
+            f"{headers.get('subject', '(no subject)')}: {email.get('snippet', '')}")
+
+
+def header_values(part: dict) -> dict:
+    # header names aren't case-sensitive: "From" and "from" are the same header
+    return {h["name"].lower(): h["value"] for h in part.get("headers", [])}
 
 
 def plain_text(part: dict) -> str:
     """The text/plain body of an email, looking inside multipart sections."""
+    if part.get("filename"):  # an attached file, not the message itself
+        return ""
     if part.get("mimeType") == "text/plain" and part.get("body", {}).get("data"):
-        return base64.urlsafe_b64decode(part["body"]["data"]).decode("utf-8", "replace")
+        content_type = header_values(part).get("content-type", "")
+        charset = re.search(r'charset="?([\w.:-]+)', content_type, re.IGNORECASE)
+        data = base64.urlsafe_b64decode(part["body"]["data"])
+        try:
+            return data.decode(charset.group(1) if charset else "utf-8", "replace")
+        except LookupError:  # a charset Python doesn't know
+            return data.decode("utf-8", "replace")
     return next((text for sub in part.get("parts", []) if (text := plain_text(sub))), "")
 
 

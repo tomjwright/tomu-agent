@@ -49,3 +49,24 @@ def test_a_calendar_only_sign_in_asks_you_to_sign_in_again_for_gmail(tmp_path, m
 
     assert is_error
     assert "Gmail isn't connected yet" in output
+
+
+def test_header_names_are_matched_whatever_their_case():
+    email = {"id": "x", "payload": {"headers": [{"name": "from", "value": "bob@example.com"},
+                                                {"name": "SUBJECT", "value": "Hi"}]}}
+    assert gmail.describe(email) == "id x |  | bob@example.com\nHi: "
+
+
+def test_a_body_is_decoded_with_its_own_charset():
+    part = {"mimeType": "text/plain",
+            "headers": [{"name": "Content-Type", "value": 'text/plain; charset="iso-8859-1"'}],
+            "body": {"data": base64.urlsafe_b64encode("Café".encode("iso-8859-1")).decode()}}
+    assert gmail.plain_text(part) == "Café"
+
+
+def test_an_attached_text_file_is_not_mistaken_for_the_body():
+    payload = {"mimeType": "multipart/mixed", "parts": [
+        {"mimeType": "text/plain", "filename": "notes.txt", "body": {"data": encoded("notes")}},
+        {"mimeType": "text/plain", "filename": "", "body": {"data": encoded("The message.")}},
+    ]}
+    assert gmail.plain_text(payload) == "The message."
