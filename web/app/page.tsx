@@ -2,15 +2,16 @@
 
 import { useEffect, useRef, useState } from "react";
 import Architecture from "./architecture";
-import { streamChat, streamConsolidate, type AgentEvent } from "./events";
+import { listPastTurns, replayTurn, streamChat, streamConsolidate, type AgentEvent, type PastTurn } from "./events";
 import Step from "./step";
 
-type Turn = { message: string; events: AgentEvent[] };
+type Turn = { message: string; events: AgentEvent[]; replay?: boolean };
 
 export default function Home() {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [input, setInput] = useState("");
   const [running, setRunning] = useState(false);
+  const [pastTurns, setPastTurns] = useState<PastTurn[]>([]);
   const latest = turns.at(-1)?.events ?? [];
   const bottom = useRef<HTMLDivElement>(null);
 
@@ -18,6 +19,11 @@ export default function Home() {
   useEffect(() => {
     bottom.current?.scrollIntoView({ behavior: "smooth" });
   }, [turns]);
+
+  // Load the saved turns once when the page opens (nothing to show if the API is down).
+  useEffect(() => {
+    listPastTurns().then(setPastTurns).catch(() => {});
+  }, []);
 
   // Append an event to the newest turn, so the page updates as steps arrive.
   function addEvent(event: AgentEvent) {
@@ -35,15 +41,20 @@ export default function Home() {
   }
 
   // Start a new entry in the chat and stream the agent's events into it.
-  async function run(title: string, stream: (onEvent: (event: AgentEvent) => void) => Promise<void>) {
+  async function run(
+    title: string,
+    stream: (onEvent: (event: AgentEvent) => void) => Promise<void>,
+    replay = false,
+  ) {
     setRunning(true);
-    setTurns((all) => [...all, { message: title, events: [] }]);
+    setTurns((all) => [...all, { message: title, events: [], replay }]);
     try {
       await stream(addEvent);
     } catch (err) {
       addEvent({ type: "error", message: `Could not reach the agent: ${err}`, at: Date.now() / 1000 });
     } finally {
       setRunning(false);
+      listPastTurns().then(setPastTurns).catch(() => {}); // the turn just finished is saved now
     }
   }
 
@@ -55,6 +66,23 @@ export default function Home() {
         <Stats events={latest} />
         <h2>Architecture</h2>
         <Architecture events={latest} />
+        <h2>Past turns</h2>
+        {pastTurns.length === 0 && <p className="muted">Nothing saved yet. Ask Tomu something first.</p>}
+        <ul className="past-turns">
+          {pastTurns.map((turn) => (
+            <li key={turn.id}>
+              <span className="muted">{new Date(turn.saved_at * 1000).toLocaleString()}</span>
+              <span className="past-message">{turn.message}</span>
+              <button
+                className="secondary"
+                disabled={running}
+                onClick={() => run(`Replay: ${turn.message}`, (onEvent) => replayTurn(turn.id, onEvent), true)}
+              >
+                Replay
+              </button>
+            </li>
+          ))}
+        </ul>
       </main>
 
       <aside className="chat">
@@ -67,7 +95,13 @@ export default function Home() {
                 <div className="bubble user">{turn.message}</div>
                 <ol className="timeline">
                   {turn.events.map((event, j) => (
-                    <Step key={j} event={event} start={turn.events[0].at} answered={isAnswered(turn.events, event)} />
+                    <Step
+                      key={j}
+                      event={event}
+                      start={turn.events[0].at}
+                      // a replayed approval was answered long ago, so it gets no buttons
+                      answered={turn.replay || isAnswered(turn.events, event)}
+                    />
                   ))}
                 </ol>
                 {end && <div className="bubble agent">{end.reply}</div>}

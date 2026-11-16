@@ -3,12 +3,14 @@
     history   every past message and reply, so the agent can follow a conversation
     facts     short things worth keeping about the user ("Tom lives in Singapore"),
               searched with SQLite's built-in full-text search (FTS5)
+    traces    every event of each past turn, so the page can replay how it went
 
 Before each turn the retrieval gate decides whether looking up facts is worth it:
 it searches only when the message has words worth searching for, so "hi" or
 "thanks" skip the lookup entirely.
 """
 
+import json
 import re
 import sqlite3
 import time
@@ -19,6 +21,7 @@ SCHEMA = """
 CREATE TABLE IF NOT EXISTS history (role TEXT, content TEXT, saved_at REAL);
 CREATE VIRTUAL TABLE IF NOT EXISTS facts USING fts5(text, saved_at UNINDEXED);
 CREATE TABLE IF NOT EXISTS consolidation (last_rowid INTEGER);
+CREATE TABLE IF NOT EXISTS traces (message TEXT, events TEXT, saved_at REAL);
 """
 
 # Words too common to say anything about what the user is asking for.
@@ -105,6 +108,26 @@ class Memory:
                 (query, limit),
             ).fetchall()
         return [text for (text,) in rows]
+
+    def save_trace(self, message: str, events: list[dict]) -> None:
+        with self.connect() as db:
+            db.execute("INSERT INTO traces VALUES (?, ?, ?)",
+                       (message, json.dumps(events), time.time()))
+
+    def traces(self, limit: int = 20) -> list[dict]:
+        """The latest turns, newest first, without their events."""
+        with self.connect() as db:
+            rows = db.execute(
+                "SELECT rowid, message, saved_at FROM traces ORDER BY rowid DESC LIMIT ?", (limit,)
+            ).fetchall()
+        return [{"id": id, "message": message, "saved_at": saved_at}
+                for id, message, saved_at in rows]
+
+    def trace(self, id: int) -> list[dict] | None:
+        """One turn's events, in the order they happened. None if there's no such turn."""
+        with self.connect() as db:
+            row = db.execute("SELECT events FROM traces WHERE rowid = ?", (id,)).fetchone()
+        return json.loads(row[0]) if row else None
 
 
 def remember_tool(memory: Memory) -> Tool:

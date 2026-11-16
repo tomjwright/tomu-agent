@@ -22,7 +22,29 @@ export type AgentEvent = { at: number } & (
   | { type: "error"; message: string }
 );
 
+export type PastTurn = { id: number; message: string; saved_at: number };
+
 const API_URL = process.env.NEXT_PUBLIC_TOMU_API ?? "http://localhost:8000";
+
+// The latest saved turns, newest first, from any front door (web, terminal or Telegram).
+export async function listPastTurns(): Promise<PastTurn[]> {
+  const response = await fetch(`${API_URL}/api/traces`);
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  return response.json();
+}
+
+// Play a saved turn's events back at their original pace, with long pauses cut to 1 second.
+// Nothing runs again: no model calls and no tools.
+export async function replayTurn(id: number, onEvent: (event: AgentEvent) => void) {
+  const response = await fetch(`${API_URL}/api/traces/${id}`);
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  const events: AgentEvent[] = await response.json();
+  for (const [i, event] of events.entries()) {
+    const pause = i === 0 ? 0 : Math.min(event.at - events[i - 1].at, 1);
+    await new Promise((resolve) => setTimeout(resolve, pause * 1000));
+    onEvent(event);
+  }
+}
 
 // Tell the waiting turn your answer to an approval_request.
 export async function answerApproval(id: string, approved: boolean) {
