@@ -55,8 +55,8 @@ def run_agent(message: str, emit: Emit, memory: Memory | None = None,
         history = memory.history()
         facts = memory.recall(message)
         record({"type": "memory_recall", "history": len(history),
-              "gate": "skip" if facts is None else "retrieve", "facts": facts or [],
-              "skills": [skill.name for skill in skills]})
+                "gate": "skip" if facts is None else "retrieve", "facts": facts or [],
+                "skills": [skill.name for skill in skills]})
 
         call_model = anthropic.Anthropic().messages.create
         model = os.getenv("TOMU_MODEL", DEFAULT_MODEL)
