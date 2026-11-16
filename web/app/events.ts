@@ -39,7 +39,8 @@ type GateVerdict = {
 };
 export type GateRun = GateVerdict & { saved_at: number };
 
-const API_URL = process.env.NEXT_PUBLIC_TOMU_API ?? "http://localhost:8000";
+// The page calls its own /api/..., and next.config.ts passes those requests on to the Python API.
+const API_URL = "";
 
 // The latest saved turns, newest first, from any front door (web, terminal or Telegram).
 export async function listPastTurns(): Promise<PastTurn[]> {
