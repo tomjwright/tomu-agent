@@ -52,8 +52,9 @@ and if they all pass, the evals. The gate is OPEN (safe to release) only when ev
 passes and at least 80% of the evals do; otherwise it's CLOSED. Each verdict is saved in
 `tomu.db`, and the page lists recent ones.
 
-The page talks to the API on `localhost:8000`; set
-`NEXT_PUBLIC_TOMU_API` to point it somewhere else.
+The page sends its requests to its own `/api/...`, and Next.js passes them on to the API
+on `localhost:8000` (set `TOMU_API` to point it somewhere else). So the browser only needs
+to reach the page, which also makes it work through a remote preview.
 
 Stream a turn's steps from the API:
 
