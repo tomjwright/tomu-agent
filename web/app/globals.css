@@ -353,3 +353,16 @@ button:disabled {
 .past-turns button {
   padding: 6px 14px;
 }
+
+/* The Evals blurb, with its button on the right. */
+.evals-intro {
+  max-width: 1000px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.evals-intro button {
+  flex-shrink: 0;
+  padding: 6px 14px;
+}

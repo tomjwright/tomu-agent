@@ -2,7 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import Architecture from "./architecture";
-import { listPastTurns, replayTurn, streamChat, streamConsolidate, type AgentEvent, type PastTurn } from "./events";
+import {
+  listPastTurns,
+  replayTurn,
+  streamChat,
+  streamConsolidate,
+  streamEvals,
+  type AgentEvent,
+  type PastTurn,
+} from "./events";
 import Step from "./step";
 
 type Turn = { message: string; events: AgentEvent[]; replay?: boolean };
@@ -66,6 +74,14 @@ export default function Home() {
         <Stats events={latest} />
         <h2>Architecture</h2>
         <Architecture events={latest} />
+        <h2>Evals</h2>
+        <p className="muted evals-intro">
+          Sends every test message in <code>evals/cases.json</code> to the model and checks what it decided. Each
+          one uses a throwaway memory, and approvals are always answered no, so nothing is sent.
+          <button className="secondary" disabled={running} onClick={() => run("Run evals", streamEvals)}>
+            Run evals
+          </button>
+        </p>
         <h2>Past turns</h2>
         {pastTurns.length === 0 && <p className="muted">Nothing saved yet. Ask Tomu something first.</p>}
         <ul className="past-turns">
@@ -149,8 +165,16 @@ function Stats({ events }: { events: AgentEvent[] }) {
       tokens += e.usage.input + e.usage.output;
     }
     if (e.type === "tool_call") toolCalls += 1;
+    if (e.type === "eval_result") {
+      modelCalls += e.model_calls;
+      toolCalls += e.tools.length;
+      tokens += e.tokens;
+    }
   }
-  const seconds = events.length > 1 ? (events.at(-1)!.at - events[0].at).toFixed(1) : "0.0";
+  const end = events.find((e) => e.type === "evals_end");
+  const seconds = end
+    ? (end.duration_ms / 1000).toFixed(1)
+    : events.length > 1 ? (events.at(-1)!.at - events[0].at).toFixed(1) : "0.0";
 
   return (
     <div className="stats">

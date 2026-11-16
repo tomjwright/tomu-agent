@@ -33,6 +33,8 @@ function stagesOf(event: AgentEvent): Stage[] {
     case "consolidation_end":
       return ["episodic", "semantic"];
     case "error":
+    case "eval_result": // evals have their own box under LLM Ops
+    case "evals_end":
       return [];
   }
 }
@@ -104,6 +106,7 @@ export default function Architecture({ events }: { events: AgentEvent[] }) {
   const active = activeStage(events);
   const visited = new Set(events.flatMap(stagesOf));
   const traced = events.some((e) => e.type === "turn_end" || e.type === "error"); // the turn was saved for replay
+  const score = events.find((e) => e.type === "evals_end");
   const count = (type: AgentEvent["type"]) => events.filter((e) => e.type === type).length;
   const recall = events.find((e) => e.type === "memory_recall");
   const succeeded = (tool: string) =>
@@ -181,9 +184,10 @@ export default function Architecture({ events }: { events: AgentEvent[] }) {
         <text x={705} y={78} className="title">Trace</text>
         <text x={705} y={95}>saved for replay</text>
       </g>
-      <g className="node planned">
+      <g className={`node ${score ? "visited" : ""}`}>
         <rect x={650} y={135} width={110} height={H} rx={8} />
-        <text x={705} y={167} className="title">Evals</text>
+        <text x={705} y={158} className="title">Evals</text>
+        <text x={705} y={175}>{score ? `${score.passed}/${score.total} passed` : "test messages"}</text>
       </g>
     </svg>
   );

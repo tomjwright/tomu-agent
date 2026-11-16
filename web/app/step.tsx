@@ -99,6 +99,24 @@ export default function Step({ event, start, answered }: { event: AgentEvent; st
       );
     case "error":
       return <Row offset={offset} kind="error" title="Error" body={event.message} />;
+    case "eval_result":
+      return (
+        <Row
+          offset={offset}
+          kind={event.passed ? "tool" : "error"}
+          title={`${event.passed ? "✓" : "✗"} ${event.message}`}
+          meta={`tools: ${event.tools.join(", ") || "none"} · ${event.tokens} tokens`}
+          body={event.problems.join("\n") || undefined}
+        />
+      );
+    case "evals_end":
+      return (
+        <Row
+          offset={offset}
+          title={`Evals: ${event.passed}/${event.total} passed`}
+          meta={`${event.tokens} tokens · ${(event.duration_ms / 1000).toFixed(1)}s`}
+        />
+      );
   }
 }
 
