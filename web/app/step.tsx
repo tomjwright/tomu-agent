@@ -80,6 +80,23 @@ export default function Step({ event, start, answered }: { event: AgentEvent; st
       );
     case "memory_save":
       return <Row offset={offset} kind="memory" title="Saved to history" meta="your message and the reply" />;
+    case "consolidation_start":
+      return (
+        <Row offset={offset} kind="memory" title="Consolidating memory"
+          meta={`reading ${event.messages} message(s) not consolidated yet, for lasting facts`} />
+      );
+    case "consolidation_end":
+      return (
+        <Row
+          offset={offset}
+          kind="memory"
+          title={`Consolidated: ${event.facts.length} new fact(s)`}
+          meta={event.messages
+            ? `from ${event.messages} message(s) · ${event.usage.input} in / ${event.usage.output} out tokens · ${event.duration_ms} ms`
+            : "nothing new since last time"}
+          body={event.facts.map((fact) => `+ ${fact}`).join("\n") || undefined}
+        />
+      );
     case "error":
       return <Row offset={offset} kind="error" title="Error" body={event.message} />;
   }

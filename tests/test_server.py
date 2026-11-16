@@ -59,3 +59,12 @@ def test_answering_something_that_is_not_waiting_is_a_404():
     with pytest.raises(server.HTTPException) as error:
         server.approve(server.ApprovalAnswer(id="nope", approved=True))
     assert error.value.status_code == 404
+
+
+def test_consolidate_streams_its_events(monkeypatch):
+    monkeypatch.setattr(server, "consolidate_now", lambda emit: emit(
+        {"type": "consolidation_end", "messages": 0, "facts": []}))
+
+    chunks = list(server.stream_events(server.consolidate_now))
+
+    assert json.loads(chunks[0].removeprefix("data: "))["type"] == "consolidation_end"

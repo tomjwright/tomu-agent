@@ -28,7 +28,10 @@ function stagesOf(event: AgentEvent): Stage[] {
     case "turn_end":
       return ["reply"];
     case "memory_save":
+    case "consolidation_start":
       return ["episodic"];
+    case "consolidation_end":
+      return ["episodic", "semantic"];
     case "error":
       return [];
   }
@@ -53,6 +56,8 @@ function activeStage(events: AgentEvent[]): Stage | null {
       return last.approved ? "tools" : "agent";
     case "turn_end":
       return "episodic"; // saving the turn
+    case "consolidation_start":
+      return "semantic"; // the model is distilling old messages into facts
     default:
       return null; // idle, finished or failed
   }
@@ -90,6 +95,7 @@ const LINKS: Link[] = [
   { from: "tools", to: "procedural", path: "M380 274 V465 H318 V476", label: ["use_skill", 386, 320] },
   { from: "episodic", to: "gate", path: "M415 480 V450 H265 V406", label: ["last 20 messages", 421, 470] },
   { from: "reply", to: "episodic", path: "M562 139 V507 H494", label: ["save turn", 568, 300] },
+  { from: "episodic", to: "semantic", path: "M415 534 V548 H95 V538", label: ["consolidate", 210, 545] },
 ];
 
 // The architecture diagram: one connected system. Boxes the turn has passed
@@ -101,7 +107,8 @@ export default function Architecture({ events }: { events: AgentEvent[] }) {
   const recall = events.find((e) => e.type === "memory_recall");
   const succeeded = (tool: string) =>
     events.filter((e) => e.type === "tool_result" && e.name === tool && !e.is_error).length;
-  const saved = succeeded("remember");
+  const saved = succeeded("remember") +
+    events.flatMap((e) => (e.type === "consolidation_end" ? e.facts : [])).length;
   const used = succeeded("use_skill");
   const answers = events.filter((e) => e.type === "approval_result");
   const yes = answers.filter((e) => e.type === "approval_result" && e.approved).length;

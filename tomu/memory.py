@@ -18,6 +18,7 @@ from tomu.tools import Tool
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS history (role TEXT, content TEXT, saved_at REAL);
 CREATE VIRTUAL TABLE IF NOT EXISTS facts USING fts5(text, saved_at UNINDEXED);
+CREATE TABLE IF NOT EXISTS consolidation (last_rowid INTEGER);
 """
 
 # Words too common to say anything about what the user is asking for.
@@ -53,6 +54,37 @@ class Memory:
                 "INSERT INTO history VALUES (?, ?, ?)",
                 [("user", message, now), ("assistant", reply, now)],
             )
+
+    def unconsolidated(self) -> tuple[list[dict], int, int]:
+        """Messages saved since the last consolidation, the row id where that one
+        stopped, and the row id of the newest message."""
+        with self.connect() as db:
+            done = db.execute("SELECT MAX(last_rowid) FROM consolidation").fetchone()[0] or 0
+            rows = db.execute(
+                "SELECT rowid, role, content FROM history WHERE rowid > ? ORDER BY rowid", (done,)
+            ).fetchall()
+        newest = rows[-1][0] if rows else done
+        return [{"role": role, "content": content} for _, role, content in rows], done, newest
+
+    def claim(self, done: int, newest: int) -> bool:
+        """Mark messages up to `newest` as consolidated, unless another consolidation
+        (say, from Telegram) moved the mark past `done` first. False if it did."""
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")  # nobody else can move the mark meanwhile
+            mark = db.execute("SELECT COALESCE(MAX(last_rowid), 0) FROM consolidation")
+            if mark.fetchone()[0] != done:
+                return False
+            db.execute("INSERT INTO consolidation VALUES (?)", (newest,))
+        return True
+
+    def release(self, newest: int) -> None:
+        """Undo a claim, so those messages are consolidated next time."""
+        with self.connect() as db:
+            db.execute("DELETE FROM consolidation WHERE last_rowid = ?", (newest,))
+
+    def all_facts(self) -> list[str]:
+        with self.connect() as db:
+            return [text for (text,) in db.execute("SELECT text FROM facts ORDER BY rowid")]
 
     def remember(self, fact: str) -> str:
         with self.connect() as db:
