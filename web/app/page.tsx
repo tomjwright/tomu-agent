@@ -5,7 +5,7 @@ import Architecture from "./architecture";
 import { listPastTurns, replayTurn, streamChat, streamConsolidate, type AgentEvent, type PastTurn } from "./events";
 import Step from "./step";
 
-type Turn = { message: string; events: AgentEvent[] };
+type Turn = { message: string; events: AgentEvent[]; replay?: boolean };
 
 export default function Home() {
   const [turns, setTurns] = useState<Turn[]>([]);
@@ -41,9 +41,13 @@ export default function Home() {
   }
 
   // Start a new entry in the chat and stream the agent's events into it.
-  async function run(title: string, stream: (onEvent: (event: AgentEvent) => void) => Promise<void>) {
+  async function run(
+    title: string,
+    stream: (onEvent: (event: AgentEvent) => void) => Promise<void>,
+    replay = false,
+  ) {
     setRunning(true);
-    setTurns((all) => [...all, { message: title, events: [] }]);
+    setTurns((all) => [...all, { message: title, events: [], replay }]);
     try {
       await stream(addEvent);
     } catch (err) {
@@ -72,7 +76,7 @@ export default function Home() {
               <button
                 className="secondary"
                 disabled={running}
-                onClick={() => run(`Replay: ${turn.message}`, (onEvent) => replayTurn(turn.id, onEvent))}
+                onClick={() => run(`Replay: ${turn.message}`, (onEvent) => replayTurn(turn.id, onEvent), true)}
               >
                 Replay
               </button>
@@ -91,7 +95,13 @@ export default function Home() {
                 <div className="bubble user">{turn.message}</div>
                 <ol className="timeline">
                   {turn.events.map((event, j) => (
-                    <Step key={j} event={event} start={turn.events[0].at} answered={isAnswered(turn.events, event)} />
+                    <Step
+                      key={j}
+                      event={event}
+                      start={turn.events[0].at}
+                      // a replayed approval was answered long ago, so it gets no buttons
+                      answered={turn.replay || isAnswered(turn.events, event)}
+                    />
                   ))}
                 </ol>
                 {end && <div className="bubble agent">{end.reply}</div>}
