@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Architecture from "./architecture";
-import { streamChat, streamConsolidate, type AgentEvent } from "./events";
+import { listPastTurns, replayTurn, streamChat, streamConsolidate, type AgentEvent, type PastTurn } from "./events";
 import Step from "./step";
 
 type Turn = { message: string; events: AgentEvent[] };
@@ -11,6 +11,7 @@ export default function Home() {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [input, setInput] = useState("");
   const [running, setRunning] = useState(false);
+  const [pastTurns, setPastTurns] = useState<PastTurn[]>([]);
   const latest = turns.at(-1)?.events ?? [];
   const bottom = useRef<HTMLDivElement>(null);
 
@@ -18,6 +19,11 @@ export default function Home() {
   useEffect(() => {
     bottom.current?.scrollIntoView({ behavior: "smooth" });
   }, [turns]);
+
+  // Load the saved turns once when the page opens (nothing to show if the API is down).
+  useEffect(() => {
+    listPastTurns().then(setPastTurns).catch(() => {});
+  }, []);
 
   // Append an event to the newest turn, so the page updates as steps arrive.
   function addEvent(event: AgentEvent) {
@@ -44,6 +50,7 @@ export default function Home() {
       addEvent({ type: "error", message: `Could not reach the agent: ${err}`, at: Date.now() / 1000 });
     } finally {
       setRunning(false);
+      listPastTurns().then(setPastTurns).catch(() => {}); // the turn just finished is saved now
     }
   }
 
@@ -55,6 +62,23 @@ export default function Home() {
         <Stats events={latest} />
         <h2>Architecture</h2>
         <Architecture events={latest} />
+        <h2>Past turns</h2>
+        {pastTurns.length === 0 && <p className="muted">Nothing saved yet. Ask Tomu something first.</p>}
+        <ul className="past-turns">
+          {pastTurns.map((turn) => (
+            <li key={turn.id}>
+              <span className="muted">{new Date(turn.saved_at * 1000).toLocaleString()}</span>
+              <span className="past-message">{turn.message}</span>
+              <button
+                className="secondary"
+                disabled={running}
+                onClick={() => run(`Replay: ${turn.message}`, (onEvent) => replayTurn(turn.id, onEvent))}
+              >
+                Replay
+              </button>
+            </li>
+          ))}
+        </ul>
       </main>
 
       <aside className="chat">

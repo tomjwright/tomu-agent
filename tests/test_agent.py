@@ -41,6 +41,21 @@ def test_turn_uses_history_and_facts_then_saves_itself(tmp_path, monkeypatch):
     assert memory.history()[-1] == {"role": "assistant", "content": "You live in Singapore."}
 
 
+def test_a_turn_saves_its_events_as_a_trace_for_replay(tmp_path, monkeypatch):
+    events = []
+    monkeypatch.setattr(agent.anthropic, "Anthropic", fake_client([]))
+    memory = Memory(str(tmp_path / "tomu.db"))
+
+    agent.run_agent("Where do I live?", events.append, memory, skills=[])
+
+    [saved] = memory.traces()
+    assert saved["message"] == "Where do I live?"
+    trace = memory.trace(saved["id"])
+    assert [e["type"] for e in trace] == [e["type"] for e in events]
+    assert all("at" in e for e in trace)
+    assert all("at" not in e for e in events)  # what the gateways see is unchanged
+
+
 def test_a_broken_skill_file_ends_the_turn_with_an_error(tmp_path, monkeypatch):
     events = []
     (tmp_path / "broken").mkdir()
@@ -50,3 +65,5 @@ def test_a_broken_skill_file_ends_the_turn_with_an_error(tmp_path, monkeypatch):
     agent.run_agent("hello", events.append, Memory(str(tmp_path / "tomu.db")))
 
     assert [e["type"] for e in events] == ["turn_start", "error"]
+    [saved] = Memory(str(tmp_path / "tomu.db")).traces()  # failed turns are kept too
+    assert saved["message"] == "hello"

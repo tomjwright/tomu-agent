@@ -103,6 +103,7 @@ const LINKS: Link[] = [
 export default function Architecture({ events }: { events: AgentEvent[] }) {
   const active = activeStage(events);
   const visited = new Set(events.flatMap(stagesOf));
+  const traced = events.some((e) => e.type === "turn_end" || e.type === "error"); // the turn was saved for replay
   const count = (type: AgentEvent["type"]) => events.filter((e) => e.type === type).length;
   const recall = events.find((e) => e.type === "memory_recall");
   const succeeded = (tool: string) =>
@@ -144,7 +145,7 @@ export default function Architecture({ events }: { events: AgentEvent[] }) {
       <Group x={10} y={10} w={620} h={290} label="Harness: one turn, from your message to the reply" />
       <Group x={340} y={35} w={150} h={255} label="Loop: up to 10 steps" solid />
       <Group x={10} y={320} w={620} h={240} label="Memory: one SQLite file on your machine" />
-      <Group x={640} y={10} w={130} h={290} label="LLM Ops: coming soon" />
+      <Group x={640} y={10} w={130} h={290} label="LLM Ops" />
 
       {LINKS.map(({ from, to, path, label }) => {
         const lit = visited.has(from) && visited.has(to);
@@ -156,7 +157,9 @@ export default function Architecture({ events }: { events: AgentEvent[] }) {
           </g>
         );
       })}
-      <path className="link planned" d="M610 112 H630 V82 H646" markerEnd="url(#arrow)" />
+      <g className={`link ${traced ? "lit" : ""}`}>
+        <path d="M610 112 H630 V82 H646" markerEnd="url(#arrow)" />
+      </g>
 
       {(Object.keys(BOX) as Stage[]).map((stage) => {
         const [x, y, w] = BOX[stage];
@@ -173,12 +176,15 @@ export default function Architecture({ events }: { events: AgentEvent[] }) {
         );
       })}
 
-      {["Trace", "Evals"].map((name, i) => (
-        <g key={name} className="node planned">
-          <rect x={650} y={55 + i * 80} width={110} height={H} rx={8} />
-          <text x={705} y={87 + i * 80} className="title">{name}</text>
-        </g>
-      ))}
+      <g className={`node ${traced ? "visited" : ""}`}>
+        <rect x={650} y={55} width={110} height={H} rx={8} />
+        <text x={705} y={78} className="title">Trace</text>
+        <text x={705} y={95}>saved for replay</text>
+      </g>
+      <g className="node planned">
+        <rect x={650} y={135} width={110} height={H} rx={8} />
+        <text x={705} y={167} className="title">Evals</text>
+      </g>
     </svg>
   );
 }

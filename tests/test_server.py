@@ -68,3 +68,15 @@ def test_consolidate_streams_its_events(monkeypatch):
     chunks = list(server.stream_events(server.consolidate_now))
 
     assert json.loads(chunks[0].removeprefix("data: "))["type"] == "consolidation_end"
+
+
+def test_past_turns_can_be_listed_and_fetched_for_replay(tmp_path, monkeypatch):
+    db = str(tmp_path / "tomu.db")
+    monkeypatch.setenv("TOMU_DB", db)
+    server.Memory(db).save_trace("hello", [{"type": "turn_start", "at": 1.0}])
+
+    [turn] = server.list_traces()
+    assert turn["message"] == "hello"
+    assert server.get_trace(turn["id"]) == [{"type": "turn_start", "at": 1.0}]
+    with pytest.raises(server.HTTPException):
+        server.get_trace(999)

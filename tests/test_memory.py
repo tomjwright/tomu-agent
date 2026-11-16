@@ -26,3 +26,15 @@ def test_gate_skips_the_lookup_when_there_is_nothing_to_search_for(tmp_path):
     memory.remember("Tom lives in Singapore")
 
     assert memory.recall("hi, thanks!") is None
+
+
+def test_a_saved_trace_comes_back_with_its_events_in_order(tmp_path):
+    memory = Memory(str(tmp_path / "tomu.db"))
+    memory.save_trace("first", [{"type": "turn_start", "at": 1.0}])
+    memory.save_trace("second", [{"type": "turn_start", "at": 2.0},
+                                 {"type": "turn_end", "at": 3.0}])
+
+    assert [t["message"] for t in memory.traces()] == ["second", "first"]
+    newest = memory.traces()[0]["id"]
+    assert [e["type"] for e in memory.trace(newest)] == ["turn_start", "turn_end"]
+    assert memory.trace(999) is None

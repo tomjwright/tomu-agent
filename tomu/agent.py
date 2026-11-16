@@ -1,6 +1,7 @@
 """One agent turn: memory, the model, the system prompt and the tools, wired into the loop."""
 
 import os
+import time
 
 import anthropic
 
@@ -40,13 +41,20 @@ def run_agent(message: str, emit: Emit, memory: Memory | None = None,
               approve: Approve = lambda id, name, input: False) -> str:
     # read TOMU_DB per turn, after the CLI or server has loaded .env
     memory = memory or Memory(os.getenv("TOMU_DB", "tomu.db"))
-    emit({"type": "turn_start", "message": message})
+    trace = []  # a copy of every event, saved at the end so the page can replay this turn
+
+    def record(event: dict) -> None:
+        """Pass the event on to whoever is watching, and keep a timed copy in the trace."""
+        trace.append(event | {"at": time.time()})
+        emit(event)
+
+    record({"type": "turn_start", "message": message})
     try:
         skills = load_skills() if skills is None else skills
         # working memory: recent history, the facts the retrieval gate found, and the skill list
         history = memory.history()
         facts = memory.recall(message)
-        emit({"type": "memory_recall", "history": len(history),
+        record({"type": "memory_recall", "history": len(history),
               "gate": "skip" if facts is None else "retrieve", "facts": facts or [],
               "skills": [skill.name for skill in skills]})
 
@@ -60,18 +68,20 @@ def run_agent(message: str, emit: Emit, memory: Memory | None = None,
             tools=ToolRegistry([current_time_tool, calendar_tool, create_event_tool,
                                 search_email_tool, read_email_tool, send_email_tool,
                                 remember_tool(memory), use_skill_tool(skills)]),
-            emit=emit,
+            emit=record,
             approve=approve,
         )
 
         if reply:  # the API rejects empty messages, so an empty reply isn't kept
             memory.save_turn(message, reply)
-            emit({"type": "memory_save"})
-            consolidate(memory, emit, call_model, model)  # only once 20 new messages built up
+            record({"type": "memory_save"})
+            consolidate(memory, record, call_model, model)  # only once 20 new messages built up
         return reply
     except Exception as exc:
-        emit({"type": "error", "message": str(exc)})
+        record({"type": "error", "message": str(exc)})
         return ""
+    finally:
+        memory.save_trace(message, trace)
 
 
 def consolidate_now(emit: Emit, memory: Memory | None = None) -> list[str]:

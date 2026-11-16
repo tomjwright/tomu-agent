@@ -4,10 +4,13 @@ The stream is Server-Sent Events: one `data: {...json event...}` line per step.
 When a tool needs your approval, the turn waits until the page answers with
 POST /api/approve {"id", "approved"}.
 POST /api/consolidate streams the same way while the agent turns messages into facts.
+GET /api/traces lists past turns, and GET /api/traces/{id} returns one turn's
+events, so the page can replay it.
 Run it with `uv run uvicorn tomu.server:app --reload`.
 """
 
 import json
+import os
 import queue
 import threading
 import time
@@ -19,6 +22,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from tomu.agent import consolidate_now, run_agent
+from tomu.memory import Memory
 
 load_dotenv()
 app = FastAPI(title="Tomu")
@@ -26,7 +30,7 @@ app = FastAPI(title="Tomu")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],
-    allow_methods=["POST"],
+    allow_methods=["GET", "POST"],
     allow_headers=["content-type"],
 )
 
@@ -52,6 +56,19 @@ def chat(request: ChatRequest) -> StreamingResponse:
 @app.post("/api/consolidate")
 def consolidate_memory() -> StreamingResponse:
     return StreamingResponse(stream_events(consolidate_now), media_type="text/event-stream")
+
+
+@app.get("/api/traces")
+def list_traces() -> list[dict]:
+    return Memory(os.getenv("TOMU_DB", "tomu.db")).traces()
+
+
+@app.get("/api/traces/{id}")
+def get_trace(id: int) -> list[dict]:
+    events = Memory(os.getenv("TOMU_DB", "tomu.db")).trace(id)
+    if events is None:
+        raise HTTPException(404, "There's no saved turn with that id.")
+    return events
 
 
 @app.post("/api/approve")

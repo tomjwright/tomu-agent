@@ -52,7 +52,7 @@ curl -N -X POST localhost:8000/api/chat \
 | `tomu/loop.py` | The loop: call the model, run the tools it asks for (after your approval, for tools that change something), feed the results back, repeat. |
 | `tomu/events.py` | The events a turn emits: `turn_start`, `memory_recall`, `llm_call`, `tool_call`, `approval_request`, `approval_result`, `tool_result`, `turn_end`, `memory_save`, `error`. |
 | `tomu/tools.py` | The `Tool` type, the registry that runs tools, and the demo `get_current_time` tool. |
-| `tomu/memory.py` | Memory in one SQLite file (`tomu.db`, or `TOMU_DB`): chat history, facts with full-text search, the retrieval gate and the `remember` tool. |
+| `tomu/memory.py` | Memory in one SQLite file (`tomu.db`, or `TOMU_DB`): chat history, facts with full-text search, the retrieval gate, the `remember` tool, and the traces of past turns. |
 | `tomu/consolidate.py` | Consolidation: every 20 new messages (or when you press Consolidate), the model turns old conversation into lasting facts. |
 | `tomu/skills.py` | Skills (procedural memory): loads every `skills/<name>/SKILL.md`, and the `use_skill` tool the model calls to read one. |
 | `skills/` | The skills themselves, as plain Markdown: a `name` and `description` header, then instructions for the model. |
@@ -60,7 +60,7 @@ curl -N -X POST localhost:8000/api/chat \
 | `tomu/google_calendar.py` | `list_calendar_events`, and `create_calendar_event`, which needs your approval. |
 | `tomu/gmail.py` | `search_email` and `read_email`, and `send_email`, which needs your approval. |
 | `tomu/agent.py` | `run_agent(message, emit)`: loads memory, wires the Anthropic client, system prompt and tools into the loop, then saves the turn. |
-| `tomu/server.py` | `POST /api/chat`: runs a turn and streams its events as Server-Sent Events. `POST /api/approve` answers an approval request. |
+| `tomu/server.py` | `POST /api/chat`: runs a turn and streams its events as Server-Sent Events. `POST /api/approve` answers an approval request. `GET /api/traces` and `GET /api/traces/{id}` return past turns for replay. |
 | `tomu/cli.py` | The terminal chat. |
 | `tomu/telegram.py` | `uv run tomu-telegram`: the Telegram gateway, with approval buttons. |
 | `web/app/page.tsx` | The page: stats and the architecture diagram on the left, the chat and its steps on the right. |

@@ -72,6 +72,7 @@ h3 {
 .arch {
   width: 100%;
   max-width: 1000px;
+  flex-shrink: 0; /* keep its size when the past turns make the page scroll */
   font-family: system-ui, sans-serif;
 }
 
@@ -320,4 +321,35 @@ button.secondary {
 button:disabled {
   opacity: 0.5;
   cursor: default;
+}
+
+/* Past turns, each with a Replay button. */
+.past-turns {
+  list-style: none;
+  padding: 0;
+  max-width: 1000px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.past-turns li {
+  display: grid;
+  grid-template-columns: 170px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  background: #1a1d23;
+  border: 1px solid #2a2e36;
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.past-message {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.past-turns button {
+  padding: 6px 14px;
 }
