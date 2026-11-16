@@ -7,5 +7,6 @@
   {"message": "Where is my home?", "facts": ["Tom's home is in Singapore"],
    "no_tools": true, "reply": ["Singapore"]},
   {"message": "What's 2 + 2?", "no_tools": true, "reply": ["4"]},
-  {"message": "Help me plan a meeting with Amy", "tools": ["use_skill"]}
+  {"message": "Help me plan a meeting with Amy", "tools": ["use_skill"]},
+  {"message": "What's the weather in London today?", "tools": ["search_web"]}
 ]

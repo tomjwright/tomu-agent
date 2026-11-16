@@ -13,6 +13,7 @@ from tomu.loop import Approve, run_loop
 from tomu.memory import Memory, remember_tool
 from tomu.skills import Skill, load_skills, use_skill_tool
 from tomu.tools import ToolRegistry, current_time_tool
+from tomu.web_search import search_web_tool
 
 SYSTEM_PROMPT = (
     "You are Tomu, a helpful personal assistant running on the user's own machine. "
@@ -67,7 +68,8 @@ def run_agent(message: str, emit: Emit, memory: Memory | None = None,
             messages=[*history, {"role": "user", "content": message}],
             tools=ToolRegistry([current_time_tool, calendar_tool, create_event_tool,
                                 search_email_tool, read_email_tool, send_email_tool,
-                                remember_tool(memory), use_skill_tool(skills)]),
+                                search_web_tool, remember_tool(memory),
+                                use_skill_tool(skills)]),
             emit=record,
             approve=approve,
         )

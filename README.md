@@ -29,6 +29,11 @@ chat shows the exact inputs with Approve and Deny buttons, and the terminal asks
 No answer within 5 minutes counts as no. If you signed in before approvals existed, run
 `uv run tomu-google` again to grant the extra permissions.
 
+To let it search the web, get a free Brave Search API key at https://brave.com/search/api/
+and put it in `.env` as `BRAVE_API_KEY`. Ask about something current, like the weather or
+the news, and you'll see a `search_web` step with the links it found. For a bigger question,
+the `web-research` skill tells it to search more than once and list its sources.
+
 To chat from your phone, create a bot with @BotFather on Telegram (`/newbot`), put its
 token in `.env` as `TELEGRAM_BOT_TOKEN`, and run `uv run tomu-telegram`. It answers only
 `TELEGRAM_ALLOWED_USER`, your numeric Telegram user id: message the bot once and your id
@@ -64,6 +69,7 @@ curl -N -X POST localhost:8000/api/chat \
 | `skills/` | The skills themselves, as plain Markdown: a `name` and `description` header, then instructions for the model. |
 | `tomu/google_auth.py` | `uv run tomu-google`, which signs you in to Google, and the shared login the Google tools use. |
 | `tomu/google_calendar.py` | `list_calendar_events`, and `create_calendar_event`, which needs your approval. |
+| `tomu/web_search.py` | `search_web`: searches the web with the Brave Search API and returns titles, links and snippets. |
 | `tomu/gmail.py` | `search_email` and `read_email`, and `send_email`, which needs your approval. |
 | `tomu/agent.py` | `run_agent(message, emit)`: loads memory, wires the Anthropic client, system prompt and tools into the loop, then saves the turn. |
 | `tomu/server.py` | `POST /api/chat`: runs a turn and streams its events as Server-Sent Events. `POST /api/approve` answers an approval request. `GET /api/traces` and `GET /api/traces/{id}` return past turns for replay. `POST /api/evals` runs the evals and streams one result per case. |
