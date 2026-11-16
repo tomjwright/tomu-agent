@@ -35,6 +35,8 @@ function stagesOf(event: AgentEvent): Stage[] {
     case "error":
     case "eval_result": // evals have their own box under LLM Ops
     case "evals_end":
+    case "gate_tests":
+    case "gate_result":
       return [];
   }
 }
@@ -107,6 +109,7 @@ export default function Architecture({ events }: { events: AgentEvent[] }) {
   const visited = new Set(events.flatMap(stagesOf));
   const traced = events.some((e) => e.type === "turn_end" || e.type === "error"); // the turn was saved for replay
   const score = events.find((e) => e.type === "evals_end");
+  const verdict = events.find((e) => e.type === "gate_result");
   const count = (type: AgentEvent["type"]) => events.filter((e) => e.type === type).length;
   const recall = events.find((e) => e.type === "memory_recall");
   const succeeded = (tool: string) =>
@@ -148,7 +151,7 @@ export default function Architecture({ events }: { events: AgentEvent[] }) {
       <Group x={10} y={10} w={620} h={290} label="Harness: one turn, from your message to the reply" />
       <Group x={340} y={35} w={150} h={255} label="Loop: up to 10 steps" solid />
       <Group x={10} y={320} w={620} h={240} label="Memory: one SQLite file on your machine" />
-      <Group x={640} y={10} w={130} h={290} label="LLM Ops" />
+      <Group x={640} y={10} w={130} h={550} label="LLM Ops" />
 
       {LINKS.map(({ from, to, path, label }) => {
         const lit = visited.has(from) && visited.has(to);
@@ -188,6 +191,30 @@ export default function Architecture({ events }: { events: AgentEvent[] }) {
         <rect x={650} y={135} width={110} height={H} rx={8} />
         <text x={705} y={158} className="title">Evals</text>
         <text x={705} y={175}>{score ? `${score.passed}/${score.total} passed` : "test messages"}</text>
+      </g>
+
+      {/* The release gate: tests and evals decide whether a change may ship. A released
+          change (a new prompt, model or tool) goes back into the loop. */}
+      <g className={`link ${verdict ? "lit" : ""}`}>
+        <path d="M705 189 V211" markerEnd="url(#arrow)" />
+      </g>
+      <g className={`link ${verdict?.open ? "lit" : ""}`}>
+        <path d="M705 275 V301" markerEnd="url(#arrow)" />
+        <text x={711} y={292}>open</text>
+      </g>
+      <g className={`link dashed ${verdict?.open ? "lit" : ""}`}>
+        <path d="M650 332 H625 V24 H415 V33" markerEnd="url(#arrow)" />
+        <text x={430} y={20}>new prompt · model · tools</text>
+      </g>
+      <g className={`node ${verdict ? (verdict.open ? "visited" : "closed") : ""}`}>
+        <polygon points="705,215 760,245 705,275 650,245" />
+        <text x={705} y={243} className="title">Release</text>
+        <text x={705} y={256}>gate</text>
+      </g>
+      <g className={`node ${verdict?.open ? "visited" : ""}`}>
+        <rect x={650} y={305} width={110} height={H} rx={8} />
+        <text x={705} y={328} className="title">Release</text>
+        <text x={705} y={345}>{verdict ? (verdict.open ? "safe to ship" : "blocked") : "tests + evals"}</text>
       </g>
     </svg>
   );

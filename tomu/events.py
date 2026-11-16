@@ -34,6 +34,12 @@ Evals (see evals.py) emit their own two events instead of a turn's steps:
                   "model_calls"}
     evals_end    {"passed", "total", "tokens",        the score
                   "duration_ms"}
+
+The release gate (see gate.py) emits the evals' events between its own two:
+    gate_tests   {"passed", "failed"}                 how many tests passed and failed
+    gate_result  {"open", "reason", "tests_passed",   the verdict: open means safe to
+                  "tests_failed", "evals_passed",     release (evals_* are null when
+                  "evals_total", "duration_ms"}       a failed test skipped them)
 """
 
 from collections.abc import Callable

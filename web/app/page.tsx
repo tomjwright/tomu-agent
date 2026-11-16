@@ -3,12 +3,15 @@
 import { useEffect, useRef, useState } from "react";
 import Architecture from "./architecture";
 import {
+  listGateRuns,
   listPastTurns,
   replayTurn,
   streamChat,
   streamConsolidate,
   streamEvals,
+  streamGate,
   type AgentEvent,
+  type GateRun,
   type PastTurn,
 } from "./events";
 import Step from "./step";
@@ -20,6 +23,7 @@ export default function Home() {
   const [input, setInput] = useState("");
   const [running, setRunning] = useState(false);
   const [pastTurns, setPastTurns] = useState<PastTurn[]>([]);
+  const [gateRuns, setGateRuns] = useState<GateRun[]>([]);
   const latest = turns.at(-1)?.events ?? [];
   const bottom = useRef<HTMLDivElement>(null);
 
@@ -28,9 +32,10 @@ export default function Home() {
     bottom.current?.scrollIntoView({ behavior: "smooth" });
   }, [turns]);
 
-  // Load the saved turns once when the page opens (nothing to show if the API is down).
+  // Load the saved turns and gate verdicts once when the page opens (nothing to show if the API is down).
   useEffect(() => {
     listPastTurns().then(setPastTurns).catch(() => {});
+    listGateRuns().then(setGateRuns).catch(() => {});
   }, []);
 
   // Append an event to the newest turn, so the page updates as steps arrive.
@@ -63,6 +68,7 @@ export default function Home() {
     } finally {
       setRunning(false);
       listPastTurns().then(setPastTurns).catch(() => {}); // the turn just finished is saved now
+      listGateRuns().then(setGateRuns).catch(() => {});
     }
   }
 
@@ -82,6 +88,24 @@ export default function Home() {
             Run evals
           </button>
         </p>
+        <h2>Release gate</h2>
+        <p className="muted evals-intro">
+          Run it after changing the prompt, the model or a tool. Every test must pass, then at least 80% of the evals.
+          OPEN means the change is safe to release.
+          <button className="secondary" disabled={running} onClick={() => run("Run release gate", streamGate)}>
+            Run release gate
+          </button>
+        </p>
+        <ul className="past-turns">
+          {gateRuns.map((verdict) => (
+            <li key={verdict.saved_at}>
+              <span className="muted">{new Date(verdict.saved_at * 1000).toLocaleString()}</span>
+              <span className={`past-message ${verdict.open ? "gate-open" : "gate-closed"}`}>
+                {verdict.open ? "OPEN" : "CLOSED"}: {verdict.reason}
+              </span>
+            </li>
+          ))}
+        </ul>
         <h2>Past turns</h2>
         {pastTurns.length === 0 && <p className="muted">Nothing saved yet. Ask Tomu something first.</p>}
         <ul className="past-turns">
@@ -171,7 +195,7 @@ function Stats({ events }: { events: AgentEvent[] }) {
       tokens += e.tokens;
     }
   }
-  const end = events.find((e) => e.type === "evals_end");
+  const end = events.find((e) => e.type === "gate_result") ?? events.find((e) => e.type === "evals_end");
   const seconds = end
     ? (end.duration_ms / 1000).toFixed(1)
     : events.length > 1 ? (events.at(-1)!.at - events[0].at).toFixed(1) : "0.0";

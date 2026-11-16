@@ -41,6 +41,12 @@ checks which tools it called and what the reply mentions, then prints a score li
 `7/8 passed`. Each case uses a throwaway memory, and approvals are always answered no, so
 nothing is sent or created. Add a case by adding an entry to that file.
 
+Before relying on a change to the prompt, the model or a tool, run the release gate:
+`uv run tomu-gate`, or press **Run release gate** on the page. It runs the tests first,
+and if they all pass, the evals. The gate is OPEN (safe to release) only when every test
+passes and at least 80% of the evals do; otherwise it's CLOSED. Each verdict is saved in
+`tomu.db`, and the page lists recent ones.
+
 The page talks to the API on `localhost:8000`; set
 `NEXT_PUBLIC_TOMU_API` to point it somewhere else.
 
@@ -66,8 +72,9 @@ curl -N -X POST localhost:8000/api/chat \
 | `tomu/google_calendar.py` | `list_calendar_events`, and `create_calendar_event`, which needs your approval. |
 | `tomu/gmail.py` | `search_email` and `read_email`, and `send_email`, which needs your approval. |
 | `tomu/agent.py` | `run_agent(message, emit)`: loads memory, wires the Anthropic client, system prompt and tools into the loop, then saves the turn. |
-| `tomu/server.py` | `POST /api/chat`: runs a turn and streams its events as Server-Sent Events. `POST /api/approve` answers an approval request. `GET /api/traces` and `GET /api/traces/{id}` return past turns for replay. `POST /api/evals` runs the evals and streams one result per case. |
+| `tomu/server.py` | `POST /api/chat`: runs a turn and streams its events as Server-Sent Events. `POST /api/approve` answers an approval request. `GET /api/traces` and `GET /api/traces/{id}` return past turns for replay. `POST /api/evals` runs the evals and streams one result per case. `POST /api/gate` runs the release gate, and `GET /api/gate` lists past verdicts. |
 | `tomu/evals.py` | `uv run tomu-evals`: runs every case in `evals/cases.json` with a throwaway memory and checks what the model decided. |
+| `tomu/gate.py` | `uv run tomu-gate`: the release gate. Runs the tests, then the evals, and saves an OPEN or CLOSED verdict. |
 | `evals/cases.json` | The eval cases: a message, plus the tools it should call (`tools`), `no_tools`, words the reply should mention (`reply`) and facts to preload (`facts`). |
 | `tomu/cli.py` | The terminal chat. |
 | `tomu/telegram.py` | `uv run tomu-telegram`: the Telegram gateway, with approval buttons. |

@@ -22,15 +22,35 @@ export type AgentEvent = { at: number } & (
   | { type: "error"; message: string }
   | { type: "eval_result"; message: string; passed: boolean; problems: string[]; tools: string[]; reply: string; tokens: number; model_calls: number }
   | { type: "evals_end"; passed: number; total: number; tokens: number; duration_ms: number }
+  | { type: "gate_tests"; passed: number; failed: number }
+  | ({ type: "gate_result" } & GateVerdict)
 );
 
 export type PastTurn = { id: number; message: string; saved_at: number };
+
+type GateVerdict = {
+  open: boolean;
+  reason: string;
+  tests_passed: number;
+  tests_failed: number;
+  evals_passed: number | null; // null when a failed test meant the evals didn't run
+  evals_total: number | null;
+  duration_ms: number;
+};
+export type GateRun = GateVerdict & { saved_at: number };
 
 const API_URL = process.env.NEXT_PUBLIC_TOMU_API ?? "http://localhost:8000";
 
 // The latest saved turns, newest first, from any front door (web, terminal or Telegram).
 export async function listPastTurns(): Promise<PastTurn[]> {
   const response = await fetch(`${API_URL}/api/traces`);
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  return response.json();
+}
+
+// The latest release gate verdicts, newest first.
+export async function listGateRuns(): Promise<GateRun[]> {
+  const response = await fetch(`${API_URL}/api/gate`);
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   return response.json();
 }
@@ -71,6 +91,11 @@ export function streamConsolidate(onEvent: (event: AgentEvent) => void) {
 // The Evals button: sends every message in evals/cases.json and streams one result per case.
 export function streamEvals(onEvent: (event: AgentEvent) => void) {
   return streamEvents("/api/evals", {}, onEvent);
+}
+
+// The Run release gate button: runs the tests, then the evals, and streams the verdict.
+export function streamGate(onEvent: (event: AgentEvent) => void) {
+  return streamEvents("/api/gate", {}, onEvent);
 }
 
 async function streamEvents(path: string, body: object, onEvent: (event: AgentEvent) => void) {

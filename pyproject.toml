@@ -16,6 +16,7 @@ tomu = "tomu.cli:main"
 tomu-google = "tomu.google_auth:connect"
 tomu-telegram = "tomu.telegram:main"
 tomu-evals = "tomu.evals:main"
+tomu-gate = "tomu.gate:main"
 
 [project.optional-dependencies]
 google = [
