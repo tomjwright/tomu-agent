@@ -30,8 +30,8 @@ or sent to the browser as JSON without any conversion.
 
 Evals (see evals.py) emit their own two events instead of a turn's steps:
     eval_result  {"message", "passed", "problems",    one case: what was sent, whether it
-                  "tools", "reply", "tokens",
-                  "model_calls"}         passed, and what went wrong if not
+                  "tools", "reply", "tokens",         passed, and what went wrong if not
+                  "model_calls"}
     evals_end    {"passed", "total", "tokens",        the score
                   "duration_ms"}
 """
