@@ -117,6 +117,24 @@ export default function Step({ event, start, answered }: { event: AgentEvent; st
           meta={`${event.tokens} tokens · ${(event.duration_ms / 1000).toFixed(1)}s`}
         />
       );
+    case "gate_tests":
+      return (
+        <Row
+          offset={offset}
+          kind={event.failed ? "error" : "tool"}
+          title={`Tests: ${event.passed} passed, ${event.failed} failed`}
+          meta={event.failed ? "the evals are skipped" : "now the evals"}
+        />
+      );
+    case "gate_result":
+      return (
+        <Row
+          offset={offset}
+          kind={event.open ? "tool" : "error"}
+          title={`Release gate ${event.open ? "OPEN: safe to release" : "CLOSED: fix this first"}`}
+          meta={`${event.reason} · ${(event.duration_ms / 1000).toFixed(1)}s`}
+        />
+      );
   }
 }
 

@@ -4,6 +4,7 @@
     facts     short things worth keeping about the user ("Tom lives in Singapore"),
               searched with SQLite's built-in full-text search (FTS5)
     traces    every event of each past turn, so the page can replay how it went
+    gate_runs every release gate verdict (see gate.py)
 
 Before each turn the retrieval gate decides whether looking up facts is worth it:
 it searches only when the message has words worth searching for, so "hi" or
@@ -22,6 +23,7 @@ CREATE TABLE IF NOT EXISTS history (role TEXT, content TEXT, saved_at REAL);
 CREATE VIRTUAL TABLE IF NOT EXISTS facts USING fts5(text, saved_at UNINDEXED);
 CREATE TABLE IF NOT EXISTS consolidation (last_rowid INTEGER);
 CREATE TABLE IF NOT EXISTS traces (message TEXT, events TEXT, saved_at REAL);
+CREATE TABLE IF NOT EXISTS gate_runs (result TEXT, saved_at REAL);
 """
 
 # Words too common to say anything about what the user is asking for.
@@ -128,6 +130,18 @@ class Memory:
         with self.connect() as db:
             row = db.execute("SELECT events FROM traces WHERE rowid = ?", (id,)).fetchone()
         return json.loads(row[0]) if row else None
+
+    def save_gate_run(self, result: dict) -> None:
+        with self.connect() as db:
+            db.execute("INSERT INTO gate_runs VALUES (?, ?)", (json.dumps(result), time.time()))
+
+    def gate_runs(self, limit: int = 10) -> list[dict]:
+        """The latest release gate verdicts, newest first."""
+        with self.connect() as db:
+            rows = db.execute(
+                "SELECT result, saved_at FROM gate_runs ORDER BY rowid DESC LIMIT ?", (limit,)
+            ).fetchall()
+        return [json.loads(result) | {"saved_at": saved_at} for result, saved_at in rows]
 
 
 def remember_tool(memory: Memory) -> Tool:

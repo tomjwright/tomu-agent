@@ -366,3 +366,20 @@ button:disabled {
   flex-shrink: 0;
   padding: 6px 14px;
 }
+
+/* The release gate: a dashed line back to the agent, red when closed. */
+.arch .link.dashed path {
+  stroke-dasharray: 4 3;
+}
+
+.arch .node.closed polygon {
+  stroke: #c0504d;
+}
+
+.gate-open {
+  color: #3d8b5f;
+}
+
+.gate-closed {
+  color: #c0504d;
+}
