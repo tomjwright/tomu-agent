@@ -81,7 +81,10 @@ def run_agent(message: str, emit: Emit, memory: Memory | None = None,
         record({"type": "error", "message": str(exc)})
         return ""
     finally:
-        memory.save_trace(message, trace)
+        try:
+            memory.save_trace(message, trace)
+        except Exception:
+            pass  # the trace is only for replay, so failing to save it mustn't break the turn
 
 
 def consolidate_now(emit: Emit, memory: Memory | None = None) -> list[str]:

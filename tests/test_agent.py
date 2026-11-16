@@ -67,3 +67,16 @@ def test_a_broken_skill_file_ends_the_turn_with_an_error(tmp_path, monkeypatch):
     assert [e["type"] for e in events] == ["turn_start", "error"]
     [saved] = Memory(str(tmp_path / "tomu.db")).traces()  # failed turns are kept too
     assert saved["message"] == "hello"
+
+
+def test_a_trace_that_cannot_be_saved_does_not_break_the_turn(tmp_path, monkeypatch):
+    monkeypatch.setattr(agent.anthropic, "Anthropic", fake_client([]))
+    memory = Memory(str(tmp_path / "tomu.db"))
+
+    def broken_save_trace(message, events):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(memory, "save_trace", broken_save_trace)
+
+    reply = agent.run_agent("Where do I live?", [].append, memory, skills=[])
+    assert reply == "You live in Singapore."
