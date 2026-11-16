@@ -4,7 +4,8 @@ The stream is Server-Sent Events: one `data: {...json event...}` line per step.
 When a tool needs your approval, the turn waits until the page answers with
 POST /api/approve {"id", "approved"}.
 POST /api/consolidate streams the same way while the agent turns messages into facts,
-and POST /api/evals while it runs the evals, one result per case.
+POST /api/evals while it runs the evals, one result per case, and POST /api/gate while it
+runs the release gate. GET /api/gate lists past gate verdicts.
 GET /api/traces lists past turns, and GET /api/traces/{id} returns one turn's
 events, so the page can replay it.
 Run it with `uv run uvicorn tomu.server:app --reload`.
@@ -24,6 +25,7 @@ from pydantic import BaseModel, Field
 
 from tomu.agent import consolidate_now, run_agent
 from tomu.evals import run_evals
+from tomu.gate import run_gate
 from tomu.memory import Memory
 
 load_dotenv()
@@ -63,6 +65,16 @@ def consolidate_memory() -> StreamingResponse:
 @app.post("/api/evals")
 def evals() -> StreamingResponse:
     return StreamingResponse(stream_events(run_evals), media_type="text/event-stream")
+
+
+@app.post("/api/gate")
+def release_gate() -> StreamingResponse:
+    return StreamingResponse(stream_events(run_gate), media_type="text/event-stream")
+
+
+@app.get("/api/gate")
+def list_gate_runs() -> list[dict]:
+    return Memory(os.getenv("TOMU_DB", "tomu.db")).gate_runs()
 
 
 @app.get("/api/traces")
