@@ -20,7 +20,7 @@ export type AgentEvent = { at: number } & (
   | { type: "consolidation_start"; messages: number }
   | { type: "consolidation_end"; messages: number; facts: string[]; usage: { input: number; output: number }; duration_ms: number }
   | { type: "error"; message: string }
-  | { type: "eval_result"; message: string; passed: boolean; problems: string[]; tools: string[]; reply: string; tokens: number }
+  | { type: "eval_result"; message: string; passed: boolean; problems: string[]; tools: string[]; reply: string; tokens: number; model_calls: number }
   | { type: "evals_end"; passed: number; total: number; tokens: number; duration_ms: number }
 );
 

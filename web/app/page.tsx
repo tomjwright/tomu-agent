@@ -165,8 +165,16 @@ function Stats({ events }: { events: AgentEvent[] }) {
       tokens += e.usage.input + e.usage.output;
     }
     if (e.type === "tool_call") toolCalls += 1;
+    if (e.type === "eval_result") {
+      modelCalls += e.model_calls;
+      toolCalls += e.tools.length;
+      tokens += e.tokens;
+    }
   }
-  const seconds = events.length > 1 ? (events.at(-1)!.at - events[0].at).toFixed(1) : "0.0";
+  const end = events.find((e) => e.type === "evals_end");
+  const seconds = end
+    ? (end.duration_ms / 1000).toFixed(1)
+    : events.length > 1 ? (events.at(-1)!.at - events[0].at).toFixed(1) : "0.0";
 
   return (
     <div className="stats">

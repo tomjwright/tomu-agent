@@ -46,7 +46,7 @@ def run_evals(emit: Emit, cases: list[dict] | None = None) -> int:
         tokens += used
         emit({"type": "eval_result", "message": case["message"], "passed": not problems,
               "problems": problems, "tools": tools_called(events), "reply": reply,
-              "tokens": used})
+              "tokens": used, "model_calls": sum(e["type"] == "llm_call" for e in events)})
 
     emit({"type": "evals_end", "passed": passed, "total": len(cases), "tokens": tokens,
           "duration_ms": int((time.time() - started) * 1000)})
