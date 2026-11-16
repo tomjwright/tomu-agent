@@ -1,37 +1,30 @@
-"""Web search: lets the agent look things up on the web with the Brave Search API.
+"""Web search: lets the agent look things up on the web with the Tavily Search API.
 
-Get a free key at https://brave.com/search/api/ and put it in .env as BRAVE_API_KEY.
+Get a free key at https://tavily.com and put it in .env as TAVILY_API_KEY.
 It only reads, so it doesn't need your approval.
 """
 
 import json
 import os
-import re
-from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from tomu.tools import Tool
 
-SEARCH_URL = "https://api.search.brave.com/res/v1/web/search"
+SEARCH_URL = "https://api.tavily.com/search"
 
 
 def search_web(query: str, count: int = 5) -> str:
-    key = os.getenv("BRAVE_API_KEY")
+    key = os.getenv("TAVILY_API_KEY")
     if not key:
-        raise RuntimeError("web search isn't set up: add BRAVE_API_KEY to .env")
-    request = Request(f"{SEARCH_URL}?{urlencode({'q': query, 'count': count})}",
-                      headers={"Accept": "application/json", "X-Subscription-Token": key})
-    with urlopen(request, timeout=10) as response:
-        results = json.load(response).get("web", {}).get("results", [])
+        raise RuntimeError("web search isn't set up: add TAVILY_API_KEY to .env")
+    request = Request(SEARCH_URL, data=json.dumps({"query": query, "max_results": count}).encode(),
+                      headers={"Authorization": f"Bearer {key}",
+                               "Content-Type": "application/json"})
+    with urlopen(request, timeout=20) as response:
+        results = json.load(response).get("results", [])
     if not results:
         return f"No results for {query!r}."
-    return "\n\n".join(describe(result) for result in results)
-
-
-def describe(result: dict) -> str:
-    """One result as three lines: title, link, and the snippet without Brave's <strong> tags."""
-    snippet = re.sub(r"<[^>]+>", "", result.get("description", ""))
-    return f"{result['title']}\n{result['url']}\n{snippet}"
+    return "\n\n".join(f"{r['title']}\n{r['url']}\n{r.get('content', '')}" for r in results)
 
 
 search_web_tool = Tool(
