@@ -46,7 +46,10 @@ def test_the_gate_opens_only_when_enough_evals_pass(monkeypatch, tmp_path):
     use_cases(monkeypatch, tmp_path, [{"message": "What's 2 + 2?", "reply": ["five"]}] * 2)
     assert gate.run_gate([].append, memory) is False
 
-    assert [run["open"] for run in memory.gate_runs()] == [False, True]  # newest first
+    use_cases(monkeypatch, tmp_path, [])
+    assert gate.run_gate([].append, memory) is False  # no cases, so nothing was checked
+
+    assert [run["open"] for run in memory.gate_runs()] == [False, False, True]  # newest first
 
 
 def test_run_tests_reads_pytest_summary(monkeypatch):

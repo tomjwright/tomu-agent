@@ -42,7 +42,7 @@ def run_gate(emit: Emit, memory: Memory | None = None) -> bool:
         cases = json.loads(evals.CASES_FILE.read_text())
         evals_passed, evals_total = evals.run_evals(emit, cases), len(cases)
         needed = math.ceil(PASS_MARK * evals_total)
-        is_open = evals_passed >= needed
+        is_open = evals_total > 0 and evals_passed >= needed  # no cases means nothing was checked
         reason = f"{evals_passed}/{evals_total} evals passed, {needed} needed"
 
     result = {"type": "gate_result", "open": is_open, "reason": reason,
