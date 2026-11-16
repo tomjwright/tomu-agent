@@ -54,6 +54,13 @@ def test_the_gate_opens_only_when_enough_evals_pass(monkeypatch, tmp_path):
 
 def test_run_tests_reads_pytest_summary(monkeypatch):
     summary = "....F\n48 passed, 2 failed, 1 skipped, 1 error in 2.10s\n"
-    monkeypatch.setattr(gate.subprocess, "run", lambda *args, **kwargs: Obj(stdout=summary))
+    monkeypatch.setattr(gate.subprocess, "run", lambda *a, **k: Obj(stdout=summary, returncode=1))
 
     assert gate.run_tests() == (48, 3)
+
+
+def test_a_failed_pytest_run_counts_as_a_failure_even_without_failed_tests(monkeypatch):
+    summary = "48 passed in 2.10s\n!!! Interrupted !!!\n"
+    monkeypatch.setattr(gate.subprocess, "run", lambda *a, **k: Obj(stdout=summary, returncode=2))
+
+    assert gate.run_tests() == (48, 1)

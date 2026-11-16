@@ -56,10 +56,12 @@ def run_gate(emit: Emit, memory: Memory | None = None) -> bool:
 
 def run_tests() -> tuple[int, int]:
     """Run pytest and read its summary line, e.g. "48 passed, 1 failed, 1 skipped in 2.1s"."""
-    output = subprocess.run([sys.executable, "-m", "pytest", "-q", "tests"],
-                            cwd=REPO, capture_output=True, text=True).stdout
-    passed = sum(int(n) for n in re.findall(r"(\d+) passed", output))
-    failed = sum(int(n) for n in re.findall(r"(\d+) (?:failed|errors?)\b", output))
+    process = subprocess.run([sys.executable, "-m", "pytest", "-q", "tests"],
+                             cwd=REPO, capture_output=True, text=True)
+    passed = sum(int(n) for n in re.findall(r"(\d+) passed", process.stdout))
+    failed = sum(int(n) for n in re.findall(r"(\d+) (?:failed|errors?)\b", process.stdout))
+    if process.returncode and not failed:
+        failed = 1  # pytest failed in a way its summary doesn't count, e.g. it was interrupted
     return passed, failed
 
 
