@@ -27,6 +27,12 @@ or sent to the browser as JSON without any conversion.
     consolidation_end {"messages", "facts",           the new facts it saved
                        "usage", "duration_ms"}
     error        {"message"}                          the turn failed
+
+Evals (see evals.py) emit their own two events instead of a turn's steps:
+    eval_result  {"message", "passed", "problems",    one case: what was sent, whether it
+                  "tools", "reply", "tokens"}         passed, and what went wrong if not
+    evals_end    {"passed", "total", "tokens",        the score
+                  "duration_ms"}
 """
 
 from collections.abc import Callable

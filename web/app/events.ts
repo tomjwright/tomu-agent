@@ -20,6 +20,8 @@ export type AgentEvent = { at: number } & (
   | { type: "consolidation_start"; messages: number }
   | { type: "consolidation_end"; messages: number; facts: string[]; usage: { input: number; output: number }; duration_ms: number }
   | { type: "error"; message: string }
+  | { type: "eval_result"; message: string; passed: boolean; problems: string[]; tools: string[]; reply: string; tokens: number }
+  | { type: "evals_end"; passed: number; total: number; tokens: number; duration_ms: number }
 );
 
 export type PastTurn = { id: number; message: string; saved_at: number };
@@ -64,6 +66,11 @@ export function streamChat(message: string, onEvent: (event: AgentEvent) => void
 // The Consolidate button: turns messages not yet consolidated into facts.
 export function streamConsolidate(onEvent: (event: AgentEvent) => void) {
   return streamEvents("/api/consolidate", {}, onEvent);
+}
+
+// The Evals button: sends every message in evals/cases.json and streams one result per case.
+export function streamEvals(onEvent: (event: AgentEvent) => void) {
+  return streamEvents("/api/evals", {}, onEvent);
 }
 
 async function streamEvents(path: string, body: object, onEvent: (event: AgentEvent) => void) {

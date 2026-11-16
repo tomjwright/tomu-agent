@@ -1,0 +1,11 @@
+[
+  {"message": "What time is it in Tokyo?", "tools": ["get_current_time"]},
+  {"message": "What's on my calendar tomorrow?", "tools": ["list_calendar_events"]},
+  {"message": "Any emails from Amy this week?", "tools": ["search_email"]},
+  {"message": "Email amy@example.com to say hi", "tools": ["send_email"]},
+  {"message": "I live in Singapore", "tools": ["remember"]},
+  {"message": "Where is my home?", "facts": ["Tom's home is in Singapore"],
+   "no_tools": true, "reply": ["Singapore"]},
+  {"message": "What's 2 + 2?", "no_tools": true, "reply": ["4"]},
+  {"message": "Help me plan a meeting with Amy", "tools": ["use_skill"]}
+]

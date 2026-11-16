@@ -3,7 +3,8 @@
 The stream is Server-Sent Events: one `data: {...json event...}` line per step.
 When a tool needs your approval, the turn waits until the page answers with
 POST /api/approve {"id", "approved"}.
-POST /api/consolidate streams the same way while the agent turns messages into facts.
+POST /api/consolidate streams the same way while the agent turns messages into facts,
+and POST /api/evals while it runs the evals, one result per case.
 GET /api/traces lists past turns, and GET /api/traces/{id} returns one turn's
 events, so the page can replay it.
 Run it with `uv run uvicorn tomu.server:app --reload`.
@@ -22,6 +23,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from tomu.agent import consolidate_now, run_agent
+from tomu.evals import run_evals
 from tomu.memory import Memory
 
 load_dotenv()
@@ -56,6 +58,11 @@ def chat(request: ChatRequest) -> StreamingResponse:
 @app.post("/api/consolidate")
 def consolidate_memory() -> StreamingResponse:
     return StreamingResponse(stream_events(consolidate_now), media_type="text/event-stream")
+
+
+@app.post("/api/evals")
+def evals() -> StreamingResponse:
+    return StreamingResponse(stream_events(run_evals), media_type="text/event-stream")
 
 
 @app.get("/api/traces")
