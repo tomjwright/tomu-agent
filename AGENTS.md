@@ -22,5 +22,6 @@ repo, `tomjwright/home`. Rules for this repo:
 ```bash
 uv run ruff check .
 uv run pytest
+actionlint && zizmor --offline .github/workflows
 cd web && npm run lint && npm run build    # when the frontend changed
 ```
