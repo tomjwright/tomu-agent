@@ -63,6 +63,15 @@ curl -N -X POST localhost:8000/api/chat \
   -H 'content-type: application/json' -d '{"message":"what time is it in Tokyo?"}'
 ```
 
+## Releasing
+
+Bump `version` in `pyproject.toml` in a PR. After it merges, tag that commit on `main` and push
+the tag: `git tag v0.2.0 && git push origin v0.2.0`. `.github/workflows/release.yml` checks the
+tag is on `main` and matches the version, runs the release gate with the `ANTHROPIC_API_KEY`
+secret of the `release` environment, and only if it is OPEN publishes a GitHub Release holding
+the tagged source archive and its `SHA256SUMS` (plus signed provenance when the repository
+variable `ATTESTATIONS_ENABLED` is `true`).
+
 ## How it works
 
 | File | What it does |
