@@ -58,3 +58,5 @@ jobs:
           echo "${GITLEAKS_SHA256}  ${archive}" | sha256sum --check
           tar -xzf "${archive}" gitleaks
       - run: ./gitleaks git --redact --no-banner .
+      # git log shows no diff for a merge commit, so also scan the files as they are now.
+      - run: ./gitleaks dir --redact --no-banner .
