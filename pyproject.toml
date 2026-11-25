@@ -3,6 +3,7 @@ name = "tomu"
 version = "0.1.0"
 description = "A local AI agent that shows every step it takes"
 readme = "README.md"
+license = "MIT"
 requires-python = ">=3.12"
 dependencies = [
     "anthropic>=2.8.0",
@@ -36,6 +37,8 @@ select = ["E", "F", "I", "UP", "B"]
 
 [dependency-groups]
 dev = [
+    "pip-audit>=2.9",
+    "pip-licenses>=5",
     "pytest>=9.2.0",
     "ruff>=0.17.5",
 ]
