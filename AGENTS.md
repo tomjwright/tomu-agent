@@ -20,6 +20,7 @@ repo, `tomjwright/home`. Rules for this repo:
 ## Checks
 
 ```bash
+uv sync --all-extras    # the google extra is needed for mypy
 uv run ruff check .
 uv run mypy
 uv run pytest
