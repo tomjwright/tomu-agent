@@ -1,0 +1,32 @@
+# Weekly update PRs for the Python dependencies (uv.lock), the page's npm packages and the pinned actions.
+# A release must be 7 days old first, so a hijacked release is usually pulled before
+# it reaches a PR. Each PR passes the same required checks as any other.
+version: 2
+updates:
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      dev:
+        dependency-type: development
+  - package-ecosystem: npm
+    directory: /web
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      dev:
+        dependency-type: development
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns: ["*"]

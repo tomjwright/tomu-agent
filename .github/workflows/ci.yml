@@ -12,6 +12,12 @@ jobs:
       - run: uv sync --all-extras
       - run: uv run ruff check .
       - run: uv run pytest
+      - name: Fail on any known vulnerability in a locked package
+        run: uv export --frozen --no-hashes --no-emit-project | uv run pip-audit --strict -r /dev/stdin
+      - name: Fail on any licence outside this permissive list (GPL and AGPL are not on it)
+        run: >-
+          uv run pip-licenses --from=mixed --partial-match --with-system
+          --allow-only "MIT;BSD;Apache;ISC;PSF;Python Software Foundation;MPL-2.0;Mozilla Public License 2.0;LGPL;GNU Lesser General Public License;Unlicense"
   web:
     runs-on: ubuntu-latest
     defaults:
@@ -27,3 +33,8 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run build
+      - run: npm audit --audit-level=moderate
+      - name: Fail on any production package licence outside this permissive list
+        run: >-
+          npx --yes license-checker-rseidelsohn@4.4.2 --production --excludePrivatePackages --summary
+          --onlyAllow "MIT;ISC;BSD-2-Clause;BSD-3-Clause;Apache-2.0;0BSD;BlueOak-1.0.0;CC0-1.0;CC-BY-4.0;MPL-2.0;LGPL-3.0-or-later;OFL-1.1"
