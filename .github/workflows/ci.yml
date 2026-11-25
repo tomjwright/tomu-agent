@@ -11,7 +11,7 @@ jobs:
       - uses: astral-sh/setup-uv@v6
       - run: uv sync --all-extras
       - run: uv run ruff check .
-      - run: uv run pytest
+      - run: uv run pytest --cov
   web:
     runs-on: ubuntu-latest
     defaults:
