@@ -21,6 +21,7 @@ repo, `tomjwright/home`. Rules for this repo:
 
 ```bash
 uv run ruff check .
+uv run mypy
 uv run pytest
 cd web && npm run lint && npm run build    # when the frontend changed
 ```

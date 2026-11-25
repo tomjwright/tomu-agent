@@ -28,6 +28,14 @@ google = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.mypy]
+files = ["tomu"]
+
+[[tool.mypy.overrides]]
+# Google's client libraries ship no type information.
+module = ["google_auth_oauthlib.*", "googleapiclient.*"]
+ignore_missing_imports = true
+
 [tool.ruff]
 line-length = 100
 
@@ -36,6 +44,7 @@ select = ["E", "F", "I", "UP", "B"]
 
 [dependency-groups]
 dev = [
+    "mypy>=1.18",
     "pytest>=9.2.0",
     "ruff>=0.17.5",
 ]
