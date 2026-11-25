@@ -35,8 +35,12 @@ def test_the_gate_opens_only_when_enough_evals_pass(monkeypatch, tmp_path):
     memory = Memory(str(tmp_path / "tomu.db"))
     monkeypatch.setattr(gate, "run_tests", lambda: (48, 0))
     monkeypatch.setattr(agent.anthropic, "Anthropic", model_that_answers("It's 4."))
-    use_cases(monkeypatch, tmp_path, [{"message": "What's 2 + 2?", "reply": ["4"]}] * 4
-              + [{"message": "What's 2 + 2?", "reply": ["five"]}])
+    use_cases(
+        monkeypatch,
+        tmp_path,
+        [{"message": "What's 2 + 2?", "reply": ["4"]}] * 4
+        + [{"message": "What's 2 + 2?", "reply": ["five"]}],
+    )
 
     events = []
     assert gate.run_gate(events.append, memory) is True  # 4/5 passed, 4 needed

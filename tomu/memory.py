@@ -113,8 +113,9 @@ class Memory:
 
     def save_trace(self, message: str, events: list[dict]) -> None:
         with self.connect() as db:
-            db.execute("INSERT INTO traces VALUES (?, ?, ?)",
-                       (message, json.dumps(events), time.time()))
+            db.execute(
+                "INSERT INTO traces VALUES (?, ?, ?)", (message, json.dumps(events), time.time())
+            )
 
     def traces(self, limit: int = 20) -> list[dict]:
         """The latest turns, newest first, without their events."""
@@ -122,8 +123,9 @@ class Memory:
             rows = db.execute(
                 "SELECT rowid, message, saved_at FROM traces ORDER BY rowid DESC LIMIT ?", (limit,)
             ).fetchall()
-        return [{"id": id, "message": message, "saved_at": saved_at}
-                for id, message, saved_at in rows]
+        return [
+            {"id": id, "message": message, "saved_at": saved_at} for id, message, saved_at in rows
+        ]
 
     def trace(self, id: int) -> list[dict] | None:
         """One turn's events, in the order they happened. None if there's no such turn."""

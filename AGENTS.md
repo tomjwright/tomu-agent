@@ -20,7 +20,7 @@ repo, `tomjwright/home`. Rules for this repo:
 ## Checks
 
 ```bash
-uv run ruff check .
+uv run ruff check . && uv run ruff format --check .
 uv run pytest
 cd web && npm run lint && npm run build    # when the frontend changed
 ```

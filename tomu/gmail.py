@@ -22,8 +22,12 @@ def search_email(query: str, max_results: int = 10) -> str:
     messages = gmail()
     found = messages.list(userId="me", q=query, maxResults=max_results).execute()
     emails = [
-        messages.get(userId="me", id=item["id"], format="metadata",
-                    metadataHeaders=["From", "Subject", "Date"]).execute()
+        messages.get(
+            userId="me",
+            id=item["id"],
+            format="metadata",
+            metadataHeaders=["From", "Subject", "Date"],
+        ).execute()
         for item in found.get("messages", [])
     ]
     if not emails:
@@ -33,8 +37,10 @@ def search_email(query: str, max_results: int = 10) -> str:
 
 def describe(email: dict) -> str:
     headers = header_values(email["payload"])
-    return (f"id {email['id']} | {headers.get('date', '')} | {headers.get('from', '')}\n"
-            f"{headers.get('subject', '(no subject)')}: {email.get('snippet', '')}")
+    return (
+        f"id {email['id']} | {headers.get('date', '')} | {headers.get('from', '')}\n"
+        f"{headers.get('subject', '(no subject)')}: {email.get('snippet', '')}"
+    )
 
 
 def header_values(part: dict) -> dict:
@@ -65,9 +71,11 @@ def read_email(id: str) -> str:
 
 search_email_tool = Tool(
     name="search_email",
-    description=("Search the user's Gmail. Takes a Gmail search query such as "
-                 "'from:alice newer_than:7d' or 'is:unread'. Returns ids, senders, "
-                 "subjects and snippets."),
+    description=(
+        "Search the user's Gmail. Takes a Gmail search query such as "
+        "'from:alice newer_than:7d' or 'is:unread'. Returns ids, senders, "
+        "subjects and snippets."
+    ),
     input_schema={
         "type": "object",
         "properties": {

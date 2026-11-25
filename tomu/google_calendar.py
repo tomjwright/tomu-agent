@@ -16,11 +16,18 @@ def fetch_events(days: int) -> list[dict]:
     calendar = google_api("calendar", "v3", CALENDAR, "Google Calendar")
     events, page = [], None
     while True:  # Google sends long calendars a page at a time
-        response = calendar.events().list(
-            calendarId="primary", timeMin=now.isoformat(),
-            timeMax=(now + timedelta(days=days)).isoformat(),
-            singleEvents=True, orderBy="startTime", pageToken=page,
-        ).execute()
+        response = (
+            calendar.events()
+            .list(
+                calendarId="primary",
+                timeMin=now.isoformat(),
+                timeMax=(now + timedelta(days=days)).isoformat(),
+                singleEvents=True,
+                orderBy="startTime",
+                pageToken=page,
+            )
+            .execute()
+        )
         events += response.get("items", [])
         page = response.get("nextPageToken")
         if not page:
@@ -69,8 +76,10 @@ create_event_tool = Tool(
         "type": "object",
         "properties": {
             "summary": {"type": "string", "description": "The event's title."},
-            "start": {"type": "string",
-                      "description": "ISO 8601 with UTC offset, e.g. 2026-11-20T15:00:00+08:00"},
+            "start": {
+                "type": "string",
+                "description": "ISO 8601 with UTC offset, e.g. 2026-11-20T15:00:00+08:00",
+            },
             "end": {"type": "string", "description": "Same format as start."},
             "location": {"type": "string"},
         },

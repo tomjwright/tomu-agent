@@ -40,16 +40,33 @@ def run_evals(emit: Emit, cases: list[dict] | None = None) -> int:
             reply = run_agent(case["message"], events.append, memory)
 
         problems = check(case, events, reply)
-        used = sum(e["usage"]["input"] + e["usage"]["output"]
-                   for e in events if e["type"] == "llm_call")
+        used = sum(
+            e["usage"]["input"] + e["usage"]["output"] for e in events if e["type"] == "llm_call"
+        )
         passed += not problems
         tokens += used
-        emit({"type": "eval_result", "message": case["message"], "passed": not problems,
-              "problems": problems, "tools": tools_called(events), "reply": reply,
-              "tokens": used, "model_calls": sum(e["type"] == "llm_call" for e in events)})
+        emit(
+            {
+                "type": "eval_result",
+                "message": case["message"],
+                "passed": not problems,
+                "problems": problems,
+                "tools": tools_called(events),
+                "reply": reply,
+                "tokens": used,
+                "model_calls": sum(e["type"] == "llm_call" for e in events),
+            }
+        )
 
-    emit({"type": "evals_end", "passed": passed, "total": len(cases), "tokens": tokens,
-          "duration_ms": int((time.time() - started) * 1000)})
+    emit(
+        {
+            "type": "evals_end",
+            "passed": passed,
+            "total": len(cases),
+            "tokens": tokens,
+            "duration_ms": int((time.time() - started) * 1000),
+        }
+    )
     return passed
 
 
@@ -82,8 +99,10 @@ def show(event: Event) -> None:
         for problem in event["problems"]:
             print(f"    {problem}")
     if event["type"] == "evals_end":
-        print(f"\n{event['passed']}/{event['total']} passed, {event['tokens']} tokens, "
-              f"{event['duration_ms'] / 1000:.1f}s")
+        print(
+            f"\n{event['passed']}/{event['total']} passed, {event['tokens']} tokens, "
+            f"{event['duration_ms'] / 1000:.1f}s"
+        )
 
 
 def main() -> None:

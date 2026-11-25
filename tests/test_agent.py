@@ -10,8 +10,11 @@ from tomu.skills import Skill, load_skills
 def fake_client(requests):
     def create(**request):
         requests.append(request)
-        return Obj(content=[Obj(type="text", text="You live in Singapore.")],
-                   stop_reason="end_turn", usage=Obj(input_tokens=10, output_tokens=5))
+        return Obj(
+            content=[Obj(type="text", text="You live in Singapore.")],
+            stop_reason="end_turn",
+            usage=Obj(input_tokens=10, output_tokens=5),
+        )
 
     return lambda: Obj(messages=Obj(create=create))
 
@@ -23,15 +26,27 @@ def test_turn_uses_history_and_facts_then_saves_itself(tmp_path, monkeypatch):
     memory.save_turn("hello", "hi Tom")
     memory.remember("Tom lives in Singapore")
 
-    skills = [Skill("weather", "Weather forecasts", "Check the forecast first."),
-              Skill("email", "Draft an email reply", "Keep it short.")]
+    skills = [
+        Skill("weather", "Weather forecasts", "Check the forecast first."),
+        Skill("email", "Draft an email reply", "Keep it short."),
+    ]
 
     agent.run_agent("Where do I live? Singapore?", events.append, memory, skills)
 
     assert [e["type"] for e in events] == [
-        "turn_start", "memory_recall", "llm_call", "turn_end", "memory_save"]
-    assert events[1] == {"type": "memory_recall", "history": 2, "gate": "retrieve",
-                              "facts": ["Tom lives in Singapore"], "skills": ["weather", "email"]}
+        "turn_start",
+        "memory_recall",
+        "llm_call",
+        "turn_end",
+        "memory_save",
+    ]
+    assert events[1] == {
+        "type": "memory_recall",
+        "history": 2,
+        "gate": "retrieve",
+        "facts": ["Tom lives in Singapore"],
+        "skills": ["weather", "email"],
+    }
     assert "Tom lives in Singapore" in requests[0]["system"]
     # the model sees each skill's description, and reads the instructions with use_skill
     assert "- email: Draft an email reply" in requests[0]["system"]

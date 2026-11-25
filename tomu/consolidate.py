@@ -27,8 +27,9 @@ PROMPT = (
 )
 
 
-def consolidate(memory: Memory, emit: Emit, call_model: Callable, model: str,
-                force: bool = False) -> list[str]:
+def consolidate(
+    memory: Memory, emit: Emit, call_model: Callable, model: str, force: bool = False
+) -> list[str]:
     """Save the lasting facts in messages not yet consolidated, and return them.
     Unless `force` is set, it waits until CONSOLIDATE_EVERY messages have built up."""
     messages, done, newest = memory.unconsolidated()
@@ -41,7 +42,9 @@ def consolidate(memory: Memory, emit: Emit, call_model: Callable, model: str,
     if messages:
         try:
             response = call_model(
-                model=model, max_tokens=1024, system=PROMPT,
+                model=model,
+                max_tokens=1024,
+                system=PROMPT,
                 messages=[{"role": "user", "content": transcript(memory.all_facts(), messages)}],
             )
         except Exception as exc:
@@ -54,8 +57,15 @@ def consolidate(memory: Memory, emit: Emit, call_model: Callable, model: str,
         for fact in facts:
             memory.remember(fact)
         usage = {"input": response.usage.input_tokens, "output": response.usage.output_tokens}
-    emit({"type": "consolidation_end", "messages": len(messages), "facts": facts,
-          "usage": usage, "duration_ms": round((time.perf_counter() - started) * 1000)})
+    emit(
+        {
+            "type": "consolidation_end",
+            "messages": len(messages),
+            "facts": facts,
+            "usage": usage,
+            "duration_ms": round((time.perf_counter() - started) * 1000),
+        }
+    )
     return facts
 
 

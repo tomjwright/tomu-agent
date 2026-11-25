@@ -13,10 +13,16 @@ def fake_client(requests):
     def create(**request):
         requests.append(request)
         if isinstance(request["messages"][-1]["content"], str):  # the user's message
-            return Obj(content=[Obj(type="tool_use", id="t1", name="get_current_time", input={})],
-                       stop_reason="tool_use", usage=usage)
-        return Obj(content=[Obj(type="text", text="It's noon in Singapore.")],
-                   stop_reason="end_turn", usage=usage)
+            return Obj(
+                content=[Obj(type="tool_use", id="t1", name="get_current_time", input={})],
+                stop_reason="tool_use",
+                usage=usage,
+            )
+        return Obj(
+            content=[Obj(type="text", text="It's noon in Singapore.")],
+            stop_reason="end_turn",
+            usage=usage,
+        )
 
     return lambda: Obj(messages=Obj(create=create))
 
@@ -38,18 +44,26 @@ def test_each_case_passes_or_fails_with_a_reason(monkeypatch):
     assert results[0]["tools"] == ["get_current_time"]
     assert results[0]["tokens"] == 30  # two model calls of 15 tokens
     assert results[1]["problems"] == ["expected remember, called get_current_time"]
-    assert results[2]["problems"] == ["expected no tools, called get_current_time",
-                                      "the reply doesn't mention '4'"]
-    assert events[-1] | {"duration_ms": 0} == {"type": "evals_end", "passed": 1, "total": 3,
-                                               "tokens": 90, "duration_ms": 0}
+    assert results[2]["problems"] == [
+        "expected no tools, called get_current_time",
+        "the reply doesn't mention '4'",
+    ]
+    assert events[-1] | {"duration_ms": 0} == {
+        "type": "evals_end",
+        "passed": 1,
+        "total": 3,
+        "tokens": 90,
+        "duration_ms": 0,
+    }
 
 
 def test_a_case_starts_with_its_own_facts_and_nothing_else(monkeypatch):
     requests = []
     monkeypatch.setattr(agent.anthropic, "Anthropic", fake_client(requests))
 
-    evals.run_evals([].append, [{"message": "Where is my home?",
-                                 "facts": ["Tom's home is in Singapore"]}])
+    evals.run_evals(
+        [].append, [{"message": "Where is my home?", "facts": ["Tom's home is in Singapore"]}]
+    )
     evals.run_evals([].append, [{"message": "Where is my home?"}])
 
     assert "Tom's home is in Singapore" in requests[0]["system"]

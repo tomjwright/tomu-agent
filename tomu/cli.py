@@ -20,8 +20,10 @@ def show(event: Event) -> None:
             print(f"{DIM}  skills on offer: {', '.join(event['skills']) or 'none'}{RESET}")
         case "llm_call":
             usage = event["usage"]
-            print(f"{DIM}  model call {event['iteration']}: {event['stop_reason']}, "
-                  f"{usage['input']} in / {usage['output']} out, {event['duration_ms']}ms{RESET}")
+            print(
+                f"{DIM}  model call {event['iteration']}: {event['stop_reason']}, "
+                f"{usage['input']} in / {usage['output']} out, {event['duration_ms']}ms{RESET}"
+            )
         case "tool_call":
             print(f"{DIM}  tool {event['name']}({json.dumps(event['input'])}){RESET}")
         case "approval_result":
@@ -34,8 +36,10 @@ def show(event: Event) -> None:
             ended = f"{event['iterations']} iteration(s), ended by {event['reason']}"
             print(f"{DIM}  ({ended}){RESET}\n")
         case "consolidation_end":
-            print(f"{DIM}  consolidated {event['messages']} message(s) into "
-                  f"{len(event['facts'])} new fact(s){RESET}")
+            print(
+                f"{DIM}  consolidated {event['messages']} message(s) into "
+                f"{len(event['facts'])} new fact(s){RESET}"
+            )
             for fact in event["facts"]:
                 print(f"{DIM}    + {fact}{RESET}")
         case "error":
