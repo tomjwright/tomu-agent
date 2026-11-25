@@ -5,3 +5,4 @@ __pycache__/
 .env
 tomu.db
 google-token.json
+.coverage

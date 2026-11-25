@@ -21,6 +21,6 @@ repo, `tomjwright/home`. Rules for this repo:
 
 ```bash
 uv run ruff check .
-uv run pytest
+uv run pytest --cov    # fails below the branch-coverage floor in pyproject.toml
 cd web && npm run lint && npm run build    # when the frontend changed
 ```
