@@ -27,3 +27,36 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run build
+  # Free on private repos: no Semgrep login and no upload to GitHub code scanning.
+  semgrep:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@caf0cab7a618c569241d31dcd442f54681755d39 # v3
+      - name: Fail on any Semgrep finding in the agent, the page or the workflows
+        run: >-
+          uvx --python 3.12 semgrep@1.187.0 scan --metrics=off --error
+          --config p/python --config p/typescript --config p/react --config p/github-actions
+          tomu web/app .github
+  # The gitleaks CLI needs no licence key, unlike gitleaks-action on organization accounts.
+  secrets-scan:
+    runs-on: ubuntu-latest
+    env:
+      GITLEAKS_VERSION: 8.30.1
+      GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install gitleaks
+        run: |
+          archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSfLO "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${archive}"
+          echo "${GITLEAKS_SHA256}  ${archive}" | sha256sum --check
+          tar -xzf "${archive}" gitleaks
+      - run: ./gitleaks git --redact --no-banner .
+      # git log shows no diff for a merge commit, so also scan the files as they are now.
+      - run: ./gitleaks dir --redact --no-banner .
