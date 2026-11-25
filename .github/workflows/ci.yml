@@ -13,7 +13,7 @@ jobs:
       - run: uv run ruff check .
       - run: uv run pytest
       - name: Fail on any known vulnerability in a locked package
-        run: uv export --frozen --no-hashes --no-emit-project | uv run pip-audit --strict -r /dev/stdin
+        run: uv export --frozen --all-extras --no-hashes --no-emit-project | uv run pip-audit --strict -r /dev/stdin
       - name: Fail on any licence outside this permissive list (GPL and AGPL are not on it)
         run: >-
           uv run pip-licenses --from=mixed --partial-match --with-system
