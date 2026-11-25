@@ -17,9 +17,11 @@ def search_web(query: str, count: int = 5) -> str:
     key = os.getenv("TAVILY_API_KEY")
     if not key:
         raise RuntimeError("web search isn't set up: add TAVILY_API_KEY to .env")
-    request = Request(SEARCH_URL, data=json.dumps({"query": query, "max_results": count}).encode(),
-                      headers={"Authorization": f"Bearer {key}",
-                               "Content-Type": "application/json"})
+    request = Request(
+        SEARCH_URL,
+        data=json.dumps({"query": query, "max_results": count}).encode(),
+        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+    )
     with urlopen(request, timeout=20) as response:
         results = json.load(response).get("results", [])
     if not results:
@@ -30,8 +32,8 @@ def search_web(query: str, count: int = 5) -> str:
 search_web_tool = Tool(
     name="search_web",
     description="Search the web for current or public information you don't know: news, "
-                "weather, prices, opening hours, people, places. Returns titles, links and "
-                "snippets.",
+    "weather, prices, opening hours, people, places. Returns titles, links and "
+    "snippets.",
     input_schema={
         "type": "object",
         "properties": {

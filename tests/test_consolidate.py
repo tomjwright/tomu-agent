@@ -10,8 +10,12 @@ from tomu.memory import Memory
 def fake_model(text, requests):
     def create(**request):
         requests.append(request)
-        return Obj(content=[Obj(type="text", text=text)], stop_reason="end_turn",
-                   usage=Obj(input_tokens=100, output_tokens=10))
+        return Obj(
+            content=[Obj(type="text", text=text)],
+            stop_reason="end_turn",
+            usage=Obj(input_tokens=100, output_tokens=10),
+        )
+
     return create
 
 
@@ -31,7 +35,9 @@ def test_waits_for_twenty_new_messages_then_saves_the_facts(tmp_path):
 
     chat(memory, 1, start=9)
     assert consolidate(memory, events.append, model, "m") == [
-        "Tom's sister is called Amy", "Tom swims on Sundays"]
+        "Tom's sister is called Amy",
+        "Tom swims on Sundays",
+    ]
 
     assert "- Tom lives in Singapore" in requests[0]["messages"][0]["content"]  # known facts
     assert "user: message 9" in requests[0]["messages"][0]["content"]
@@ -94,5 +100,8 @@ def test_a_turn_consolidates_by_itself_when_twenty_messages_built_up(tmp_path, m
     agent.run_agent("I love laksa", events.append, memory, skills=[])
 
     assert [e["type"] for e in events][-3:] == [
-        "memory_save", "consolidation_start", "consolidation_end"]
+        "memory_save",
+        "consolidation_start",
+        "consolidation_end",
+    ]
     assert memory.all_facts() == ["Tom likes laksa"]

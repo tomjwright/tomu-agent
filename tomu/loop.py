@@ -46,18 +46,27 @@ def run_loop(
 ) -> str:
     def ask_model(iteration: int, **overrides):
         started = time.perf_counter()
-        request = dict(model=model, system=system, messages=messages,
-                       tools=tools.schemas(), max_tokens=max_tokens)
+        request = dict(
+            model=model,
+            system=system,
+            messages=messages,
+            tools=tools.schemas(),
+            max_tokens=max_tokens,
+        )
         response = call_model(**(request | overrides))
-        emit({
-            "type": "llm_call",
-            "iteration": iteration,
-            "text": text_of(response),
-            "stop_reason": response.stop_reason,
-            "usage": {"input": response.usage.input_tokens,
-                      "output": response.usage.output_tokens},
-            "duration_ms": ms_since(started),
-        })
+        emit(
+            {
+                "type": "llm_call",
+                "iteration": iteration,
+                "text": text_of(response),
+                "stop_reason": response.stop_reason,
+                "usage": {
+                    "input": response.usage.input_tokens,
+                    "output": response.usage.output_tokens,
+                },
+                "duration_ms": ms_since(started),
+            }
+        )
         messages.append({"role": "assistant", "content": response.content})
         return response
 
@@ -75,33 +84,67 @@ def run_loop(
         # guardrail 1: no tool calls means the model is answering the human
         if not tool_calls:
             reply = text_of(response)
-            emit({"type": "turn_end", "reply": reply, "iterations": iteration,
-                  "reason": "no_tool_calls"})
+            emit(
+                {
+                    "type": "turn_end",
+                    "reply": reply,
+                    "iterations": iteration,
+                    "reason": "no_tool_calls",
+                }
+            )
             return reply
 
         # act, then observe: run each tool and hand the results back
         results = []
         for call in tool_calls:
-            emit({"type": "tool_call", "iteration": iteration, "id": call.id,
-                  "name": call.name, "input": call.input})
+            emit(
+                {
+                    "type": "tool_call",
+                    "iteration": iteration,
+                    "id": call.id,
+                    "name": call.name,
+                    "input": call.input,
+                }
+            )
             approved = not tools.needs_approval(call.name) or ask_approval(call)
             started = time.perf_counter()  # after approval, so waiting for you isn't counted
             if approved:
                 output, is_error = tools.execute(call.name, call.input)
             else:
                 output, is_error = "The user declined this action, so it was not done.", True
-            emit({"type": "tool_result", "id": call.id, "name": call.name, "output": output,
-                  "is_error": is_error, "duration_ms": ms_since(started)})
-            results.append({"type": "tool_result", "tool_use_id": call.id,
-                            "content": output, "is_error": is_error})
+            emit(
+                {
+                    "type": "tool_result",
+                    "id": call.id,
+                    "name": call.name,
+                    "output": output,
+                    "is_error": is_error,
+                    "duration_ms": ms_since(started),
+                }
+            )
+            results.append(
+                {
+                    "type": "tool_result",
+                    "tool_use_id": call.id,
+                    "content": output,
+                    "is_error": is_error,
+                }
+            )
         messages.append({"role": "user", "content": results})
 
     # guardrail 2: out of iterations, so one last call with tools switched off
-    final = ask_model(max_iterations + 1, system=f"{system}\n\n{LIMIT_NOTE}",
-                      tool_choice={"type": "none"})
+    final = ask_model(
+        max_iterations + 1, system=f"{system}\n\n{LIMIT_NOTE}", tool_choice={"type": "none"}
+    )
     reply = text_of(final)
-    emit({"type": "turn_end", "reply": reply, "iterations": max_iterations + 1,
-          "reason": "max_iterations"})
+    emit(
+        {
+            "type": "turn_end",
+            "reply": reply,
+            "iterations": max_iterations + 1,
+            "reason": "max_iterations",
+        }
+    )
     return reply
 
 

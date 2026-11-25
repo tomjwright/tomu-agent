@@ -12,14 +12,16 @@ def fake_urlopen(body, seen):
     def urlopen(request, timeout):
         seen.append(request)
         return io.BytesIO(json.dumps(body).encode())
+
     return urlopen
 
 
 def test_search_web_sends_the_query_and_key_and_lists_results(monkeypatch):
     monkeypatch.setenv("TAVILY_API_KEY", "tvly-123")
     seen = []
-    results = [{"title": "London weather", "url": "https://example.com/london",
-                "content": "Rain, 12°C"}]
+    results = [
+        {"title": "London weather", "url": "https://example.com/london", "content": "Rain, 12°C"}
+    ]
     monkeypatch.setattr(web_search, "urlopen", fake_urlopen({"results": results}, seen))
 
     text = web_search.search_web("weather in London")

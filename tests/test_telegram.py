@@ -16,9 +16,17 @@ class FakeTelegram:
         if self.press and "reply_markup" in params:
             data = params["reply_markup"]["inline_keyboard"][0][0]["callback_data"]
             call_id = data.rpartition(":")[0]
-            self.bot.handle({"update_id": 2, "callback_query": {
-                "id": "cb1", "from": {"id": self.presser}, "data": f"{call_id}:{self.press}",
-                "message": {"chat": {"id": CHAT}, "message_id": 9, "text": params["text"]}}})
+            self.bot.handle(
+                {
+                    "update_id": 2,
+                    "callback_query": {
+                        "id": "cb1",
+                        "from": {"id": self.presser},
+                        "data": f"{call_id}:{self.press}",
+                        "message": {"chat": {"id": CHAT}, "message_id": 9, "text": params["text"]},
+                    },
+                }
+            )
         return {}
 
     def texts(self, method):
@@ -37,15 +45,20 @@ def agent_that_sends(answers):
         answers.append(approve("toolu_1", "send_email", {"to": "bob@example.com"}))
         emit({"type": "llm_call"})
         return "Done."
+
     return fake_run_agent
 
 
 def test_your_message_gets_the_reply_and_a_line_of_steps(monkeypatch):
     def fake_run_agent(message, emit, approve):
-        for event in [{"type": "llm_call"}, {"type": "tool_call", "name": "get_current_time"},
-                      {"type": "llm_call"}]:
+        for event in [
+            {"type": "llm_call"},
+            {"type": "tool_call", "name": "get_current_time"},
+            {"type": "llm_call"},
+        ]:
             emit(event)
         return f"You said: {message}"
+
     monkeypatch.setattr(telegram, "run_agent", fake_run_agent)
     fake = FakeTelegram()
 
@@ -58,8 +71,12 @@ def test_your_message_gets_the_reply_and_a_line_of_steps(monkeypatch):
 def test_messages_from_anyone_else_are_ignored(capsys):
     fake = FakeTelegram()
 
-    bot_with(fake).handle({"update_id": 1, "message": {
-        "from": {"id": STRANGER}, "chat": {"id": 1}, "text": "read my email"}})
+    bot_with(fake).handle(
+        {
+            "update_id": 1,
+            "message": {"from": {"id": STRANGER}, "chat": {"id": 1}, "text": "read my email"},
+        }
+    )
 
     assert fake.calls == []
     assert "99" in capsys.readouterr().out

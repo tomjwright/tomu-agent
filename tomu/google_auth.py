@@ -39,14 +39,17 @@ def connect() -> None:
         from google_auth_oauthlib.flow import InstalledAppFlow
     except ImportError:
         raise SystemExit(NOT_INSTALLED) from None
-    client = {"installed": {
-        "client_id": os.environ["GOOGLE_CLIENT_ID"],
-        "client_secret": os.environ["GOOGLE_CLIENT_SECRET"],
-        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-        "token_uri": "https://oauth2.googleapis.com/token",
-    }}
+    client = {
+        "installed": {
+            "client_id": os.environ["GOOGLE_CLIENT_ID"],
+            "client_secret": os.environ["GOOGLE_CLIENT_SECRET"],
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token",
+        }
+    }
     flow = InstalledAppFlow.from_client_config(
-        client, [CALENDAR, CALENDAR_WRITE, GMAIL, GMAIL_SEND])
+        client, [CALENDAR, CALENDAR_WRITE, GMAIL, GMAIL_SEND]
+    )
     save_token(flow.run_local_server(port=0))
     print(f"Connected. Token saved to {token_path()}")
 

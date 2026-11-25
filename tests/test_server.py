@@ -29,6 +29,7 @@ def run_agent_that_asks(answers):
     def fake(message, emit, approve):
         emit({"type": "approval_request", "id": "t1", "name": "send", "input": {}})
         answers.append(approve("t1", "send", {}))
+
     return fake
 
 
@@ -62,8 +63,11 @@ def test_answering_something_that_is_not_waiting_is_a_404():
 
 
 def test_consolidate_streams_its_events(monkeypatch):
-    monkeypatch.setattr(server, "consolidate_now", lambda emit: emit(
-        {"type": "consolidation_end", "messages": 0, "facts": []}))
+    monkeypatch.setattr(
+        server,
+        "consolidate_now",
+        lambda emit: emit({"type": "consolidation_end", "messages": 0, "facts": []}),
+    )
 
     chunks = list(server.stream_events(server.consolidate_now))
 

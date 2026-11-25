@@ -32,14 +32,20 @@ def system_prompt(facts: list[str], skills: list[Skill]) -> str:
         prompt += f"\n\nThings you remember about the user:\n{remembered}"
     if skills:
         listed = "\n".join(f"- {skill.name}: {skill.description}" for skill in skills)
-        prompt += ("\n\nSkills you can use. When one fits the request, call use_skill "
-                   f"with its name and follow the instructions it returns:\n{listed}")
+        prompt += (
+            "\n\nSkills you can use. When one fits the request, call use_skill "
+            f"with its name and follow the instructions it returns:\n{listed}"
+        )
     return prompt
 
 
-def run_agent(message: str, emit: Emit, memory: Memory | None = None,
-              skills: list[Skill] | None = None,
-              approve: Approve = lambda id, name, input: False) -> str:
+def run_agent(
+    message: str,
+    emit: Emit,
+    memory: Memory | None = None,
+    skills: list[Skill] | None = None,
+    approve: Approve = lambda id, name, input: False,
+) -> str:
     # read TOMU_DB per turn, after the CLI or server has loaded .env
     memory = memory or Memory(os.getenv("TOMU_DB", "tomu.db"))
     trace = []  # a copy of every event, saved at the end so the page can replay this turn
@@ -55,9 +61,15 @@ def run_agent(message: str, emit: Emit, memory: Memory | None = None,
         # working memory: recent history, the facts the retrieval gate found, and the skill list
         history = memory.history()
         facts = memory.recall(message)
-        record({"type": "memory_recall", "history": len(history),
-                "gate": "skip" if facts is None else "retrieve", "facts": facts or [],
-                "skills": [skill.name for skill in skills]})
+        record(
+            {
+                "type": "memory_recall",
+                "history": len(history),
+                "gate": "skip" if facts is None else "retrieve",
+                "facts": facts or [],
+                "skills": [skill.name for skill in skills],
+            }
+        )
 
         call_model = anthropic.Anthropic().messages.create
         model = os.getenv("TOMU_MODEL", DEFAULT_MODEL)
@@ -66,10 +78,19 @@ def run_agent(message: str, emit: Emit, memory: Memory | None = None,
             model=model,
             system=system_prompt(facts or [], skills),
             messages=[*history, {"role": "user", "content": message}],
-            tools=ToolRegistry([current_time_tool, calendar_tool, create_event_tool,
-                                search_email_tool, read_email_tool, send_email_tool,
-                                search_web_tool, remember_tool(memory),
-                                use_skill_tool(skills)]),
+            tools=ToolRegistry(
+                [
+                    current_time_tool,
+                    calendar_tool,
+                    create_event_tool,
+                    search_email_tool,
+                    read_email_tool,
+                    send_email_tool,
+                    search_web_tool,
+                    remember_tool(memory),
+                    use_skill_tool(skills),
+                ]
+            ),
             emit=record,
             approve=approve,
         )
@@ -93,8 +114,13 @@ def consolidate_now(emit: Emit, memory: Memory | None = None) -> list[str]:
     """The Consolidate button: consolidate whatever is new, however little."""
     try:
         memory = memory or Memory(os.getenv("TOMU_DB", "tomu.db"))
-        return consolidate(memory, emit, anthropic.Anthropic().messages.create,
-                           os.getenv("TOMU_MODEL", DEFAULT_MODEL), force=True)
+        return consolidate(
+            memory,
+            emit,
+            anthropic.Anthropic().messages.create,
+            os.getenv("TOMU_MODEL", DEFAULT_MODEL),
+            force=True,
+        )
     except Exception as exc:
         emit({"type": "error", "message": str(exc)})
         return []

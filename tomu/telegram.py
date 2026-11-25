@@ -58,19 +58,23 @@ class Bot:
             self.answer_button(press)
         elif (message := update.get("message")) and "text" in message:
             if message["from"]["id"] != self.allowed_user:
-                print(f"Ignored a message from Telegram user {message['from']['id']}. "
-                      "If that's you, set TELEGRAM_ALLOWED_USER to it.")
+                print(
+                    f"Ignored a message from Telegram user {message['from']['id']}. "
+                    "If that's you, set TELEGRAM_ALLOWED_USER to it."
+                )
                 return
             # a thread per turn, so button presses still arrive while a turn waits for one
-            turn = threading.Thread(target=self.run_turn,
-                                    args=(message["chat"]["id"], message["text"]), daemon=True)
+            turn = threading.Thread(
+                target=self.run_turn, args=(message["chat"]["id"], message["text"]), daemon=True
+            )
             turn.start()
 
     def run_turn(self, chat_id: int, text: str) -> None:
         self.send("sendChatAction", chat_id=chat_id, action="typing")
         started, events = time.perf_counter(), []
-        reply = run_agent(text, events.append,
-                          approve=lambda id, name, input: self.ask(chat_id, id, name, input))
+        reply = run_agent(
+            text, events.append, approve=lambda id, name, input: self.ask(chat_id, id, name, input)
+        )
         errors = [e["message"] for e in events if e["type"] == "error"]
         reply = reply or f"Error: {errors[0] if errors else 'no reply'}"
         footer = summary(events, time.perf_counter() - started)
@@ -79,11 +83,18 @@ class Bot:
     def ask(self, chat_id: int, id: str, name: str, input: dict) -> bool:
         """Send the exact action with Approve and Deny buttons, and wait for a press."""
         self.waiting[id] = queue.Queue(maxsize=1)  # ready before the buttons can be pressed
-        buttons = [[{"text": "Approve", "callback_data": f"{id}:yes"},
-                    {"text": "Deny", "callback_data": f"{id}:no"}]]
-        self.send("sendMessage", chat_id=chat_id,
-                  text=f"Allow {name}?\n{json.dumps(input, indent=2)}"[:MAX_TEXT],
-                  reply_markup={"inline_keyboard": buttons})
+        buttons = [
+            [
+                {"text": "Approve", "callback_data": f"{id}:yes"},
+                {"text": "Deny", "callback_data": f"{id}:no"},
+            ]
+        ]
+        self.send(
+            "sendMessage",
+            chat_id=chat_id,
+            text=f"Allow {name}?\n{json.dumps(input, indent=2)}"[:MAX_TEXT],
+            reply_markup={"inline_keyboard": buttons},
+        )
         try:
             return self.waiting[id].get(timeout=APPROVAL_TIMEOUT)
         except queue.Empty:
@@ -101,9 +112,12 @@ class Bot:
                 box.put_nowait(answer == "yes")
                 note = "Approved" if answer == "yes" else "Declined"
                 # replace the buttons with the answer, so they can't be pressed twice
-                self.send("editMessageText", chat_id=press["message"]["chat"]["id"],
-                          message_id=press["message"]["message_id"],
-                          text=f"{press['message']['text']}\n\n{note}.")
+                self.send(
+                    "editMessageText",
+                    chat_id=press["message"]["chat"]["id"],
+                    message_id=press["message"]["message_id"],
+                    text=f"{press['message']['text']}\n\n{note}.",
+                )
             except queue.Full:
                 note = "That was already answered."
         self.send("answerCallbackQuery", callback_query_id=press["id"], text=note)
@@ -115,16 +129,23 @@ def main() -> None:
     if bot.allowed_user:
         print(f"Tomu is on Telegram. Only user {bot.allowed_user} can talk to it. Ctrl-C to stop.")
     else:
-        print("TELEGRAM_ALLOWED_USER isn't set, so the bot answers nobody yet. "
-              "Message it, and your id is printed here.")
+        print(
+            "TELEGRAM_ALLOWED_USER isn't set, so the bot answers nobody yet. "
+            "Message it, and your id is printed here."
+        )
     offset = 0  # tells Telegram which updates we've already handled
     while True:
         try:
-            updates = call("getUpdates", offset=offset, timeout=POLL_SECONDS,
-                           allowed_updates=["message", "callback_query"])
+            updates = call(
+                "getUpdates",
+                offset=offset,
+                timeout=POLL_SECONDS,
+                allowed_updates=["message", "callback_query"],
+            )
         except urllib.error.HTTPError as error:
-            raise SystemExit(f"Telegram refused the request ({error}). "
-                             "Check TELEGRAM_BOT_TOKEN.") from None
+            raise SystemExit(
+                f"Telegram refused the request ({error}). Check TELEGRAM_BOT_TOKEN."
+            ) from None
         except OSError as error:  # offline or a timeout: try again shortly
             print(f"Couldn't reach Telegram ({error}). Retrying in 5s.")
             time.sleep(5)

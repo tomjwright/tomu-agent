@@ -45,10 +45,16 @@ def run_gate(emit: Emit, memory: Memory | None = None) -> bool:
         is_open = evals_total > 0 and evals_passed >= needed  # no cases means nothing was checked
         reason = f"{evals_passed}/{evals_total} evals passed, {needed} needed"
 
-    result = {"type": "gate_result", "open": is_open, "reason": reason,
-              "tests_passed": tests_passed, "tests_failed": tests_failed,
-              "evals_passed": evals_passed, "evals_total": evals_total,
-              "duration_ms": int((time.time() - started) * 1000)}
+    result = {
+        "type": "gate_result",
+        "open": is_open,
+        "reason": reason,
+        "tests_passed": tests_passed,
+        "tests_failed": tests_failed,
+        "evals_passed": evals_passed,
+        "evals_total": evals_total,
+        "duration_ms": int((time.time() - started) * 1000),
+    }
     emit(result)
     memory.save_gate_run(result)
     return is_open
@@ -56,8 +62,9 @@ def run_gate(emit: Emit, memory: Memory | None = None) -> bool:
 
 def run_tests() -> tuple[int, int]:
     """Run pytest and read its summary line, e.g. "48 passed, 1 failed, 1 skipped in 2.1s"."""
-    process = subprocess.run([sys.executable, "-m", "pytest", "-q", "tests"],
-                             cwd=REPO, capture_output=True, text=True)
+    process = subprocess.run(
+        [sys.executable, "-m", "pytest", "-q", "tests"], cwd=REPO, capture_output=True, text=True
+    )
     passed = sum(int(n) for n in re.findall(r"(\d+) passed", process.stdout))
     failed = sum(int(n) for n in re.findall(r"(\d+) (?:failed|errors?)\b", process.stdout))
     if process.returncode and not failed:

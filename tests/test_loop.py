@@ -12,8 +12,7 @@ echo = Tool(
 
 
 def response(blocks, stop_reason):
-    return Obj(content=blocks, stop_reason=stop_reason,
-               usage=Obj(input_tokens=10, output_tokens=5))
+    return Obj(content=blocks, stop_reason=stop_reason, usage=Obj(input_tokens=10, output_tokens=5))
 
 
 def text(t):
@@ -33,8 +32,15 @@ def run(responses, max_iterations=10):
         return responses.pop(0)
 
     messages = [{"role": "user", "content": "hi"}]
-    reply = run_loop(fake_model, "test-model", "system", messages, ToolRegistry([echo]),
-                     events.append, max_iterations=max_iterations)
+    reply = run_loop(
+        fake_model,
+        "test-model",
+        "system",
+        messages,
+        ToolRegistry([echo]),
+        events.append,
+        max_iterations=max_iterations,
+    )
     return reply, events, requests, messages
 
 
@@ -77,17 +83,28 @@ def test_stops_at_max_iterations_with_one_tools_off_call():
 def run_with_approval(answer):
     """Run a turn where the model asks for a tool that needs approval."""
     ran, events, asked = [], [], []
-    send = Tool(name="send", description="Send it", input_schema={"type": "object"},
-                run=lambda: ran.append(True) or "sent", needs_approval=True)
+    send = Tool(
+        name="send",
+        description="Send it",
+        input_schema={"type": "object"},
+        run=lambda: ran.append(True) or "sent",
+        needs_approval=True,
+    )
     responses = [tool_use("send", {}), text("ok")]
 
     def approve(id, name, input):
         asked.append((id, name, input))
         return answer
 
-    run_loop(lambda **request: responses.pop(0), "test-model", "system",
-             [{"role": "user", "content": "hi"}], ToolRegistry([send]), events.append,
-             approve=approve)
+    run_loop(
+        lambda **request: responses.pop(0),
+        "test-model",
+        "system",
+        [{"role": "user", "content": "hi"}],
+        ToolRegistry([send]),
+        events.append,
+        approve=approve,
+    )
     return ran, events, asked
 
 
@@ -95,8 +112,15 @@ def test_a_tool_that_needs_approval_runs_after_a_yes():
     ran, events, asked = run_with_approval(True)
     assert ran == [True]
     assert asked == [("t1", "send", {})]
-    assert types(events) == ["llm_call", "tool_call", "approval_request", "approval_result",
-                             "tool_result", "llm_call", "turn_end"]
+    assert types(events) == [
+        "llm_call",
+        "tool_call",
+        "approval_request",
+        "approval_result",
+        "tool_result",
+        "llm_call",
+        "turn_end",
+    ]
     assert events[3]["approved"] is True
     assert events[4]["output"] == "sent"
 
@@ -110,9 +134,20 @@ def test_a_no_means_the_tool_never_runs_and_the_model_is_told():
 
 def test_without_a_way_to_ask_the_answer_is_no():
     ran, events = [], []
-    send = Tool(name="send", description="Send it", input_schema={"type": "object"},
-                run=lambda: ran.append(True) or "sent", needs_approval=True)
+    send = Tool(
+        name="send",
+        description="Send it",
+        input_schema={"type": "object"},
+        run=lambda: ran.append(True) or "sent",
+        needs_approval=True,
+    )
     responses = [tool_use("send", {}), text("ok")]
-    run_loop(lambda **request: responses.pop(0), "test-model", "system",
-             [{"role": "user", "content": "hi"}], ToolRegistry([send]), events.append)
+    run_loop(
+        lambda **request: responses.pop(0),
+        "test-model",
+        "system",
+        [{"role": "user", "content": "hi"}],
+        ToolRegistry([send]),
+        events.append,
+    )
     assert ran == []
