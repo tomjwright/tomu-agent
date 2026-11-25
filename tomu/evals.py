@@ -32,7 +32,7 @@ def run_evals(emit: Emit, cases: list[dict] | None = None) -> int:
     started = time.time()
     passed = tokens = 0
     for case in cases:
-        events = []
+        events: list[Event] = []
         with tempfile.TemporaryDirectory() as folder:
             memory = Memory(f"{folder}/eval.db")
             for fact in case.get("facts", []):

@@ -68,7 +68,8 @@ class Bot:
 
     def run_turn(self, chat_id: int, text: str) -> None:
         self.send("sendChatAction", chat_id=chat_id, action="typing")
-        started, events = time.perf_counter(), []
+        started = time.perf_counter()
+        events: list[dict] = []
         reply = run_agent(text, events.append,
                           approve=lambda id, name, input: self.ask(chat_id, id, name, input))
         errors = [e["message"] for e in events if e["type"] == "error"]
