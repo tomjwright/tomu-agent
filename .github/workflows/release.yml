@@ -33,12 +33,12 @@ jobs:
           git merge-base --is-ancestor "$GITHUB_SHA" origin/main
           version=$(uvx --from toml-cli==0.7.0 toml get --toml-path pyproject.toml project.version)
           test "$GITHUB_REF_NAME" = "v${version}"
-      - run: uv sync --frozen --all-extras
+      - run: uv sync --locked --all-extras
       - name: Run the release gate, which fails unless it is OPEN
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           TOMU_DB: ${{ runner.temp }}/gate.db
-        run: uv run tomu-gate
+        run: uv run --frozen tomu-gate
       - name: Archive the tagged source and write SHA256SUMS
         run: |
           mkdir dist
